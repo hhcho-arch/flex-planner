@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>선택근무 플래너 · 모비데이즈</title>
+<meta name="description" content="선택적 근로시간제 월 목표근로시간과 하루 필요 근무시간을 팀 단위로 관리하는 페이지">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>⏱️</text></svg>">
+<style>
+  :root{
+    color-scheme:light;
+    --page:#f2f2ef; --card:#ffffff; --sunk:#f7f7f4;
+    --ink:#0b0b0b; --ink-2:#4b4a47; --muted:#7e7c76;
+    --line:#e4e3dd; --line-2:#cfcec7;
+    --brand:#1f6fd0; --brand-ink:#14508f; --brand-wash:#e8f1fc;
+    --good:#0a8f0a; --good-wash:#e6f5e6;
+    --warn:#b07400; --warn-wash:#fdf3e0;
+    --crit:#c22f2f; --crit-wash:#fbeaea;
+    --shadow:0 1px 2px rgba(11,11,11,.05),0 10px 30px rgba(11,11,11,.06);
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --page:#101010; --card:#1c1c1b; --sunk:#242422;
+    --ink:#ffffff; --ink-2:#cfcec7; --muted:#96948d;
+    --line:#333331; --line-2:#454542;
+    --brand:#5aa0f0; --brand-ink:#8fc0f7; --brand-wash:#17304d;
+    --good:#4cc94c; --good-wash:#133013;
+    --warn:#e3ab3c; --warn-wash:#3a2c0d;
+    --crit:#f07171; --crit-wash:#3b1919;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);
+    font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:26px 20px 96px}
+  .num{font-variant-numeric:tabular-nums}
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  h1{font-size:20px;margin:0;letter-spacing:-.02em}
+  header .sub{color:var(--muted);font-size:14px;margin:0}
+  .grow{flex:1}
+  select,input,button{font:inherit;color:inherit}
+  select,input[type=text],input[type=date]{background:var(--card);border:1px solid var(--line-2);border-radius:10px;padding:8px 11px}
+  input:focus,select:focus{outline:2px solid var(--brand);outline-offset:1px}
+  button{background:var(--card);border:1px solid var(--line-2);border-radius:10px;padding:8px 13px;cursor:pointer}
+  button:hover{background:var(--sunk)}
+  button:disabled{opacity:.5;cursor:default}
+  button.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+  button.pri:hover{filter:brightness(1.08)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:var(--shadow);margin-bottom:18px}
+  .card > h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 18px;font-weight:700}
+  .summary{display:flex;flex-wrap:wrap;gap:8px 34px;align-items:baseline}
+  .summary .item{display:flex;flex-direction:column;gap:1px}
+  .summary .k{font-size:12.5px;color:var(--muted)}
+  .summary .v{font-size:22px;font-weight:660;letter-spacing:-.02em}
+  .summary .v em{font-style:normal;font-size:13px;font-weight:500;color:var(--ink-2);margin-left:3px}
+  .hero{display:flex;gap:30px;align-items:center;flex-wrap:wrap}
+  .hero .figure{font-size:60px;font-weight:700;letter-spacing:-.04em;line-height:1;white-space:nowrap}
+  .hero .fcap{font-size:13.5px;color:var(--muted);margin-bottom:7px}
+  .hero .side{flex:1;min-width:250px;font-size:15px;color:var(--ink-2)}
+  .hero .side b{color:var(--ink)}
+  .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:650;margin-top:10px}
+  .p-good{background:var(--good-wash);color:var(--good)}
+  .p-brand{background:var(--brand-wash);color:var(--brand-ink)}
+  .p-warn{background:var(--warn-wash);color:var(--warn)}
+  .p-crit{background:var(--crit-wash);color:var(--crit)}
+  .track{position:relative;height:14px;background:var(--sunk);border-radius:7px;border:1px solid var(--line)}
+  .track .fill{position:absolute;left:0;top:0;bottom:0;background:var(--brand);border-radius:7px;min-width:3px}
+  .track .tick{position:absolute;top:-5px;bottom:-5px;width:2.5px;background:var(--ink);border-radius:2px;box-shadow:0 0 0 2.5px var(--card)}
+  .tracklab{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted);margin-top:9px}
+  .tracklab b{color:var(--ink)}
+  .inline{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;margin-bottom:22px}
+  label.fld{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--ink-2)}
+  label.fld input{width:118px;text-align:right}
+  .check{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-2);padding-bottom:9px;cursor:pointer}
+  .team{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:14px}
+  .mcard{background:var(--sunk);border:1px solid var(--line);border-radius:15px;padding:16px 17px}
+  .mcard.me{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset}
+  .mcard .top{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .mcard .nm{font-size:16px;font-weight:680;letter-spacing:-.01em}
+  .mcard .tag{font-size:11px;font-weight:700;color:#fff;background:var(--brand);border-radius:6px;padding:1px 6px}
+  .mcard .need{font-size:31px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
+  .mcard .needcap{font-size:12.5px;color:var(--muted)}
+  .mcard .row2{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:11px}
+  .mcard input{width:82px;text-align:right;padding:6px 9px;font-size:13.5px;background:var(--card)}
+  .mcard .lbl{font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px}
+  .mcard .foot{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:8px}
+  details{background:var(--card);border:1px solid var(--line);border-radius:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+  details > summary{cursor:pointer;padding:17px 24px;font-size:14.5px;font-weight:640;list-style:none;display:flex;align-items:center;gap:9px}
+  details > summary::-webkit-details-marker{display:none}
+  details > summary::before{content:"▸";color:var(--muted);font-size:12px}
+  details[open] > summary::before{content:"▾"}
+  details > summary span.hint{font-weight:400;color:var(--muted);font-size:13px}
+  .dbody{padding:0 24px 24px}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:right;padding:11px 10px;border-bottom:1px solid var(--line);font-size:14px;white-space:nowrap}
+  th{font-size:12px;color:var(--muted);font-weight:650;border-bottom:1.5px solid var(--line-2)}
+  th:first-child,td:first-child{text-align:left}
+  tbody tr:last-child td{border-bottom:none}
+  .scroll{overflow-x:auto}
+  .note{font-size:13.5px;color:var(--ink-2);background:var(--sunk);border-radius:12px;padding:13px 15px;margin-top:14px}
+  .note b{color:var(--ink)}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px}
+  .chip{display:inline-flex;align-items:center;gap:7px;background:var(--sunk);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}
+  .chip.dim{opacity:.5;cursor:default}
+  .grid-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
+  .dowhead{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;font-size:12px;color:var(--muted);text-align:center;margin-top:14px}
+  .dcell{background:var(--sunk);border:1px solid var(--line);border-radius:11px;padding:7px;min-height:66px}
+  .dcell.off{opacity:.45}
+  .dcell.hol{border-color:var(--crit);background:var(--crit-wash)}
+  .dcell.today{outline:2px solid var(--brand);outline-offset:-1px}
+  .dcell .d{font-size:12.5px;font-weight:650;display:flex;justify-content:space-between}
+  .dcell .d span{color:var(--muted);font-weight:400}
+  .dcell input{width:100%;text-align:right;padding:3px 6px;font-size:13px;margin-top:5px;background:var(--card)}
+  .dcell .hn{font-size:11px;color:var(--crit);margin-top:4px;line-height:1.3}
+  .timeline{position:relative;height:46px;border:1px solid var(--line);border-radius:12px;background:var(--sunk);overflow:hidden;margin-top:12px}
+  textarea{width:100%;min-height:88px;background:var(--sunk);border:1px solid var(--line-2);border-radius:12px;padding:11px;font-size:12.5px;font-family:ui-monospace,Menlo,monospace}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:11px}
+  .btnrow .msg{font-size:13px;color:var(--muted)}
+  /* 동기화 상태 */
+  .syncbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);
+    background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 14px;margin-bottom:18px;box-shadow:var(--shadow)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+  .dot.on{background:var(--good)} .dot.off{background:var(--warn)} .dot.err{background:var(--crit)}
+  .setup{background:var(--warn-wash);border:1px solid var(--warn);border-radius:16px;padding:18px 20px;margin-bottom:18px;font-size:14px}
+  .setup h3{margin:0 0 8px;font-size:15px}
+  .setup ol{margin:8px 0 0;padding-left:22px}
+  .setup li{margin-bottom:5px}
+  .setup code{background:var(--card);padding:1px 6px;border-radius:6px;font-size:12.5px}
+  @media (max-width:600px){
+    .wrap{padding:20px 14px 80px}
+    .card{padding:19px;border-radius:15px}
+    .hero .figure{font-size:46px}
+    .summary{gap:8px 22px}
+  }
+  @media print{body{background:#fff}details,.syncbar,.setup{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>선택근무 플래너</h1>
+    <p class="sub">[MAIN]선택적 근무제도 · 코어타임 11:00–16:00</p>
+  </div>
+  <div class="grow"></div>
+  <select id="whoami" title="나"></select>
+  <select id="ym" title="기준 월"></select>
+  <input type="date" id="today" title="기준일">
+  <button class="iconbtn" id="theme" title="라이트/다크">◐</button>
+</header>
+
+<div class="setup" id="setup" hidden>
+  <h3>⚙️ 아직 공유 서버가 연결되지 않았습니다 — 지금은 “혼자 쓰는 모드”</h3>
+  <div>입력값이 이 브라우저에만 저장되고 팀원에게 보이지 않습니다. 함께 쓰려면 아래 3단계를 한 번만 해주세요. (같이 받은 <code>배포가이드.md</code>에 캡처 수준으로 자세히 적어뒀습니다.)</div>
+  <ol>
+    <li>Google 스프레드시트를 새로 만들고 <b>확장 프로그램 &gt; Apps Script</b>에 <code>Code.gs</code> 내용을 붙여넣기</li>
+    <li><b>배포 &gt; 새 배포 &gt; 웹 앱</b> (액세스: 모든 사용자) → 나오는 URL 복사</li>
+    <li>이 파일 아래쪽 <code>const CONFIG</code>의 <code>apiUrl</code>과 <code>key</code>를 채우고 다시 올리기</li>
+  </ol>
+</div>
+
+<div class="syncbar" id="syncbar" hidden>
+  <span class="dot" id="dot"></span>
+  <span id="syncText">연결 중…</span>
+  <div class="grow"></div>
+  <button id="reload">새로 읽기</button>
+</div>
+
+<section class="card">
+  <div class="summary" id="summary"></div>
+</section>
+
+<section class="card">
+  <h2>내 근무</h2>
+  <div class="inline">
+    <label class="fld">누적 근무시간 <input type="text" id="myWorked" class="num" placeholder="16:01"></label>
+    <label class="fld">앞으로 쓸 연차 (일) <input type="text" id="myAnnual" class="num" value="0"></label>
+    <label class="check"><input type="checkbox" id="incToday" checked> 오늘 포함</label>
+  </div>
+  <div class="hero">
+    <div>
+      <div class="fcap" id="heroCap">남은 근무일 하루 평균</div>
+      <div class="figure num" id="heroFig">–</div>
+      <div id="heroPill"></div>
+    </div>
+    <div class="side" id="heroSide"></div>
+  </div>
+  <div style="margin-top:24px">
+    <div class="track"><div class="fill" id="myFill"></div><div class="tick" id="myTick"></div></div>
+    <div class="tracklab"><span id="myL"></span><span id="myR"></span></div>
+  </div>
+  <div class="inline" style="margin:22px 0 0">
+    <label class="fld">출근 시각 <input type="text" id="startAt" class="num" value="09:30"></label>
+    <label class="fld">휴게 시간 <input type="text" id="breakAt" class="num" value="1:00"></label>
+    <div style="flex:1;min-width:230px;padding-bottom:2px">
+      <div style="font-size:12.5px;color:var(--muted)">권장 근무 블록</div>
+      <div id="coreText" style="font-size:16px;font-weight:650"></div>
+    </div>
+  </div>
+  <div class="timeline" id="timeline"></div>
+</section>
+
+<section class="card">
+  <h2>팀 현황 <span style="text-transform:none;letter-spacing:0;font-weight:400" id="teamSub"></span></h2>
+  <div class="team" id="team"></div>
+  <div class="btnrow" style="margin:14px 0 0">
+    <button id="addM">+ 팀원 추가</button>
+    <button id="delM">− 마지막 팀원 삭제</button>
+  </div>
+  <div class="note" id="teamNote"></div>
+</section>
+
+<details>
+  <summary>목표시간 계산 근거 <span class="hint">공휴일 조정 · FLEX 값 고정</span></summary>
+  <div class="dbody">
+    <div id="formula" style="font-size:14.5px"></div>
+    <div class="chips" id="holChips"></div>
+    <div class="inline" style="margin:18px 0 0">
+      <label class="fld">FLEX 표시 목표값으로 고정 <input type="text" id="override" class="num" placeholder="169:06" style="width:130px"></label>
+      <label class="fld">주 소정근로 <select id="weekBase"><option>40</option><option>35</option><option>32</option></select></label>
+    </div>
+    <div class="note">토·일에 걸친 공휴일은 소정근로가 없어 차감하지 않습니다. 회사가 별도 휴일을 부여한 날은 칩을 눌러 켜고 끌 수 있어요.</div>
+  </div>
+</details>
+
+<details>
+  <summary>하루 N시간 시나리오 <span class="hint">언제 목표를 채우는지</span></summary>
+  <div class="dbody scroll">
+    <table id="scen"><thead><tr>
+      <th>하루 근무</th><th>월 총계</th><th>목표 대비</th><th>목표 도달일</th><th>판정</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+</details>
+
+<details>
+  <summary>일별 근무 기록 <span class="hint">내 브라우저에만 저장됩니다</span></summary>
+  <div class="dbody">
+    <label class="check"><input type="checkbox" id="useDaily"> 일별 합계를 내 누적 근무시간으로 사용</label>
+    <div class="dowhead"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span></div>
+    <div class="grid-days" id="days"></div>
+    <div class="note"><b>8:30</b>, <b>8.5</b>, <b>8</b> 모두 인식합니다. 연차는 <b>연</b>, 반차는 <b>반</b>.</div>
+  </div>
+</details>
+
+<details>
+  <summary>백업 / 복원 <span class="hint">JSON으로 내보내기</span></summary>
+  <div class="dbody">
+    <div class="btnrow">
+      <button id="bExport">JSON 만들기</button>
+      <button id="bCopy">복사</button>
+      <button id="bDown">파일로 저장</button>
+      <button class="pri" id="bImport">붙여넣은 JSON 불러오기</button>
+      <span class="msg" id="saveMsg"></span>
+    </div>
+    <textarea id="json" placeholder="JSON을 붙여넣고 '불러오기'"></textarea>
+  </div>
+</details>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   ① 배포 설정 — Apps Script 웹앱 URL과 공유키를 넣으면 팀 공유가 켜집니다.
+   비워두면 이 브라우저에만 저장되는 '혼자 쓰는 모드'로 동작합니다.
+   ═══════════════════════════════════════════════════════════════ */
+const CONFIG = {
+  apiUrl: "https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnSd-3vTnMkF3YOVHiWpDeFNiLpFkd2x9JpFtEVbhESe1ZAjrvGj4am5Tb8cHjnU5zknzDgDk-XwRMhML2_PXeN5LKSRk8UIXazCfH-vHWwmIisBT-Rsxmjqy5s0FIuwhskFtPAZWIUfsb4hQMAwtWngMmkLV4U5bmfLk_b1tggAO8Cfh3Oh1Rl0K6YkAMHTlQ5kCsS9CiH6SOd4XHOGnO2tPbrOagbLYmAvb1ggnEnoneo8DXX4YhsCS2OF1hgC5DmgIbwKkeSBhjfWuNgdcOfMK2lNpu00za5fyTJSu6psi_sv1pHW1Uc-2v88tfogW3R4K6Za&lib=MKl-29H34ZZwngOwxeyheWam5KHc-KJeU",                 // 예: "https://script.google.com/macros/s/AKfy.../exec"
+  key:    "AIAXLAB-flex",    // Code.gs의 SHARED_KEY와 똑같이 맞추세요
+  pollSeconds: 45,            // 다른 사람 변경을 몇 초마다 다시 읽을지
+  members: ["문재영","오정은","정수빈","정원형","조현호"]   // 기본 팀원 (서버에 값이 있으면 서버 우선)
+};
+
+(function(){
+"use strict";
+
+/* ── 공휴일 (필요하면 여기만 고치세요) ── */
+const HOLIDAYS={
+ "2026-01-01":"신정","2026-02-16":"설날 연휴","2026-02-17":"설날","2026-02-18":"설날 연휴",
+ "2026-03-01":"삼일절","2026-03-02":"삼일절 대체","2026-05-01":"근로자의 날","2026-05-05":"어린이날",
+ "2026-05-24":"부처님오신날","2026-05-25":"부처님오신날 대체","2026-06-03":"지방선거일","2026-06-06":"현충일",
+ "2026-08-15":"광복절","2026-08-17":"광복절 대체휴일","2026-09-24":"추석 연휴","2026-09-25":"추석",
+ "2026-09-26":"추석 연휴","2026-09-28":"추석 대체","2026-10-03":"개천절","2026-10-05":"개천절 대체",
+ "2026-10-09":"한글날","2026-12-25":"성탄절","2027-01-01":"신정"
+};
+const DOW=["일","월","화","수","목","금","토"];
+const LS="flexPlanner.v3";
+
+const S={
+  ym:"2026-08", today:"2026-08-05", weekBase:40, holOff:{}, override:"",
+  incToday:true, useDaily:false, daily:{}, startAt:"09:30", breakAt:"1:00",
+  whoami:"", members:[]
+};
+let sync={on:!!CONFIG.apiUrl, state:"idle", last:null, saving:0, err:""};
+
+/* ── 유틸 ── */
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parseISO=s=>{const p=String(s).split("-").map(Number);return new Date(p[0],p[1]-1,p[2]);};
+function toMin(v){
+  if(v==null) return null;
+  let s=String(v).trim().replace(/\s/g,""); if(!s) return null;
+  if(/^[-+]?\d+:\d{1,2}$/.test(s)){const n=s[0]==="-";s=s.replace(/^[-+]/,"");
+    const[h,m]=s.split(":").map(Number);const t=h*60+m;return n?-t:t;}
+  let m=s.match(/^([-+]?\d+(?:\.\d+)?)시간?(?:(\d+(?:\.\d+)?)분?)?$/);
+  if(m) return Math.round(parseFloat(m[1])*60+(m[2]?parseFloat(m[2]):0));
+  if(/^[-+]?\d+(\.\d+)?분$/.test(s)) return Math.round(parseFloat(s));
+  if(/^[-+]?\d+(\.\d+)?$/.test(s)) return Math.round(parseFloat(s)*60);
+  return null;
+}
+const hm=v=>v==null||isNaN(v)?"–":(v<0?"-":"")+Math.floor(Math.abs(Math.round(v))/60)+":"+pad(Math.abs(Math.round(v))%60);
+function ko(v){ if(v==null||isNaN(v))return "–";
+  const n=v<0;v=Math.abs(Math.round(v));const h=Math.floor(v/60),m=v%60;
+  return (n?"-":"")+(h?h+"시간":"")+(m?(h?" ":"")+m+"분":(h?"":"0분")); }
+const clock=v=>{v=Math.round(v);return pad(Math.floor(v/60)%24)+":"+pad(((v%60)+60)%60);};
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+const $=id=>document.getElementById(id);
+
+/* ── 월 계산 ── */
+function month(){
+  const[y,m]=S.ym.split("-").map(Number);
+  const n=new Date(y,m,0).getDate(), L=[];
+  for(let d=1;d<=n;d++){
+    const dt=new Date(y,m-1,d), key=iso(dt), w=dt.getDay();
+    const hol=HOLIDAYS[key]||null, wd=w>=1&&w<=5;
+    const cut=!!hol&&wd&&!S.holOff[key];
+    L.push({d,key,dt,w,hol,wd,cut,work:wd&&!cut});
+  }
+  const per=Math.floor(S.weekBase*60/7);
+  const base=Math.floor(n/7)*S.weekBase*60+(n%7)*per;
+  const hc=L.filter(x=>x.cut).length, ov=toMin(S.override);
+  return {y,m,n,L,base,hc,holMin:hc*480,
+          target:(ov&&ov>0)?ov:base-hc*480, ovOn:!!(ov&&ov>0),
+          workDays:L.filter(x=>x.work).length};
+}
+function split(mi){
+  const t=parseISO(S.today); let rem=0,list=[];
+  mi.L.forEach(x=>{ if(!x.work)return; const c=x.dt-t;
+    if(c>0||(c===0&&S.incToday)){rem++;list.push(x);} });
+  return {rem,list,past:mi.workDays-rem};
+}
+const me=()=>S.members.find(x=>x.name===S.whoami)||S.members[0]||{name:"",worked:"",annual:"0"};
+function dailySum(mi){ let s=0;
+  mi.L.forEach(x=>{ const r=(S.daily[x.key]||"").trim(); if(!r)return;
+    if(/^연/.test(r)){s+=480;return;} if(/^반/.test(r)){s+=240;return;}
+    const v=toMin(r); if(v)s+=v; });
+  return s; }
+function calc(mb,mi,sp){
+  const av=Math.max(0,parseFloat(mb.annual)||0);
+  const isMe=mb.name===S.whoami;
+  const worked=(isMe&&S.useDaily)? dailySum(mi) : (toMin(mb.worked)||0);
+  const credit=Math.round(av*480), rem=mi.target-worked-credit;
+  const days=Math.max(0,sp.rem-av);
+  return {worked,credit,target:mi.target,rem,days,
+          need:days>0?rem/days:null, done:rem<=0,
+          pct:mi.target?Math.min(100,(worked+credit)/mi.target*100):0, av};
+}
+function level(need,done){
+  if(done) return {c:"p-good",i:"✓",t:"달성"};
+  if(need==null) return {c:"p-crit",i:"!",t:"근무일 없음"};
+  if(need<=460) return {c:"p-good",i:"✓",t:"여유"};
+  if(need<=500) return {c:"p-brand",i:"●",t:"정상"};
+  if(need<=540) return {c:"p-warn",i:"▲",t:"주의"};
+  return {c:"p-crit",i:"■",t:"연장근로 필요"};
+}
+
+/* ── 서버 동기화 ── */
+function setSync(state,msg){
+  sync.state=state;
+  const d=$("dot"), t=$("syncText");
+  d.className="dot "+(state==="ok"?"on":state==="err"?"err":"off");
+  t.textContent=msg;
+}
+async function pull(silent){
+  if(!sync.on) return;
+  if(!silent) setSync("idle","읽는 중…");
+  try{
+    const u=CONFIG.apiUrl+"?key="+encodeURIComponent(CONFIG.key)+"&month="+encodeURIComponent(S.ym)+"&t="+Date.now();
+    const r=await fetch(u,{method:"GET"});
+    const j=await r.json();
+    if(!j.ok) throw new Error(j.error||"서버 오류");
+    const byName={}; (j.rows||[]).forEach(x=>byName[x.name]=x);
+    // 순서는 CONFIG.members 고정 → 카드가 저장할 때마다 뒤바뀌지 않게. 서버에만 있는 이름은 뒤에 붙임.
+    const extra=(j.rows||[]).map(x=>x.name).filter(n=>CONFIG.members.indexOf(n)<0).sort();
+    const names=[...new Set([...CONFIG.members, ...extra])];
+    S.members=names.map(n=>({
+      name:n,
+      worked:byName[n]? String(byName[n].worked||"") : (S.members.find(m=>m.name===n)?.worked||""),
+      annual:byName[n]? String(byName[n].annual||"0") : (S.members.find(m=>m.name===n)?.annual||"0"),
+      at:byName[n]?byName[n].updatedAt:null
+    }));
+    sync.last=new Date();
+    setSync("ok","팀과 동기화됨 · "+sync.last.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})+" 기준");
+    fillWho(); render();
+  }catch(e){
+    setSync("err","동기화 실패 — 잠시 후 다시 시도합니다 ("+e.message+")");
+  }
+}
+let pushTimer=null;
+function pushSoon(name){
+  if(!sync.on) return;
+  clearTimeout(pushTimer);
+  setSync("idle","저장 대기…");
+  pushTimer=setTimeout(()=>push(name),900);
+}
+async function push(name){
+  if(!sync.on) return;
+  const mb=S.members.find(x=>x.name===name); if(!mb) return;
+  setSync("idle","저장 중…");
+  try{
+    const r=await fetch(CONFIG.apiUrl,{method:"POST",
+      body:JSON.stringify({key:CONFIG.key,month:S.ym,name:mb.name,worked:mb.worked,annual:mb.annual})});
+    const j=await r.json();
+    if(!j.ok) throw new Error(j.error||"서버 오류");
+    sync.last=new Date();
+    setSync("ok","저장 완료 · "+sync.last.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}));
+  }catch(e){ setSync("err","저장 실패 — 값은 화면에 남아 있습니다 ("+e.message+")"); }
+}
+
+/* ── 로컬 저장 (개인 설정 + 혼자 쓰는 모드) ── */
+function saveLocal(){
+  try{ localStorage.setItem(LS,JSON.stringify({
+    whoami:S.whoami, today:S.today, startAt:S.startAt, breakAt:S.breakAt,
+    incToday:S.incToday, useDaily:S.useDaily, daily:S.daily,
+    holOff:S.holOff, override:S.override, weekBase:S.weekBase,
+    members: sync.on? null : S.members
+  })); }catch(_){}
+}
+function loadLocal(){
+  try{ const o=JSON.parse(localStorage.getItem(LS)||"null"); if(!o) return;
+    ["whoami","today","startAt","breakAt","override"].forEach(k=>{ if(o[k]!=null) S[k]=o[k]; });
+    if(o.incToday!=null) S.incToday=o.incToday;
+    if(o.useDaily!=null) S.useDaily=o.useDaily;
+    if(o.daily) S.daily=o.daily;
+    if(o.holOff) S.holOff=o.holOff;
+    if(o.weekBase) S.weekBase=o.weekBase;
+    if(o.members&&o.members.length&&!sync.on) S.members=o.members;
+  }catch(_){}
+}
+
+/* ── 렌더 ── */
+function render(){
+  const mi=month(), sp=split(mi), M=me(), c=calc(M,mi,sp);
+
+  $("summary").innerHTML=[
+    ["이번 달 목표","<span style='color:var(--brand)'>"+hm(mi.target)+"</span><em>"+ko(mi.target)+"</em>"],
+    ["근무일",mi.workDays+"<em>일 · 평균 "+hm(mi.target/mi.workDays)+"</em>"],
+    ["남은 근무일",sp.rem+"<em>일</em>"],
+    ["오늘",mi.m+"월 "+parseISO(S.today).getDate()+"일<em>"+DOW[parseISO(S.today).getDay()]+"요일</em>"]
+  ].map(([k,v])=>"<div class='item'><div class='k'>"+k+"</div><div class='v num'>"+v+"</div></div>").join("");
+
+  const lv=level(c.need,c.done);
+  $("heroCap").textContent=(M.name?M.name+" · ":"")+"남은 근무일 "+c.days+"일 · 하루 평균";
+  $("heroFig").textContent=c.done?"달성 완료":(c.days>0?hm(c.need):"–");
+  $("heroPill").innerHTML="<span class='pill "+lv.c+"'>"+lv.i+" "+lv.t+"</span>";
+  $("heroSide").innerHTML= c.done
+    ? "목표를 <b>"+ko(-c.rem)+"</b> 초과했습니다. 초과분이 연장근로 신청·승인 대상인지 확인하세요."
+    : (c.days>0
+      ? "남은 <b>"+ko(c.rem)+"</b>을 "+c.days+"일에 나눈 값입니다.<br>표준 8시간 대비 <b>"+(c.need-480>=0?"+":"")+hm(c.need-480)+"</b>"
+        +(c.av?" · 연차 "+c.av+"일("+ko(c.credit)+") 인정 반영":"")
+      : "남은 근무일이 없습니다. 미달 <b>"+ko(c.rem)+"</b>은 급여 공제 대상이 될 수 있어요.");
+
+  const pace=mi.workDays?Math.min(100,sp.past/mi.workDays*100):0;
+  const f=$("myFill"); f.style.width=c.pct+"%"; f.style.background=c.done?"var(--good)":"var(--brand)";
+  $("myTick").style.left=pace+"%";
+  $("myL").innerHTML="누적 <b class='num'>"+hm(c.worked)+"</b> · "+c.pct.toFixed(1)+"%";
+  $("myR").innerHTML="기대 페이스 "+pace.toFixed(0)+"% · 목표 <b class='num'>"+hm(mi.target)+"</b>";
+  timeline(c.done?480:(c.need||480));
+
+  let html="",sw=0,st=0,risk=0,doneN=0;
+  S.members.forEach((mb,i)=>{
+    const k=calc(mb,mi,sp), l=level(k.need,k.done);
+    sw+=k.worked+k.credit; st+=k.target;
+    if(k.done)doneN++; else if(k.need!=null&&k.need>540)risk++;
+    const isMe=mb.name===S.whoami;
+    html+="<div class='mcard"+(isMe?" me":"")+"'>"+
+      "<div class='top'><span class='nm'>"+esc(mb.name)+"</span>"+(isMe?"<span class='tag'>나</span>":"")+
+        "<span style='margin-left:auto' class='pill "+l.c+"'>"+l.i+" "+l.t+"</span></div>"+
+      "<div class='row2'>"+
+        "<div><div class='needcap'>하루 필요</div><div class='need num'>"+(k.done?"–":(k.days>0?hm(k.need):"–"))+"</div></div>"+
+        "<div style='display:flex;gap:8px'>"+
+          "<div><span class='lbl'>누적</span><input type='text' class='num' data-i='"+i+"' data-k='worked' value='"+esc(mb.worked)+"'"+(isMe&&S.useDaily?" disabled":"")+"></div>"+
+          "<div><span class='lbl'>연차</span><input type='text' class='num' data-i='"+i+"' data-k='annual' value='"+esc(mb.annual)+"' style='width:52px'></div>"+
+        "</div></div>"+
+      "<div class='track'><div class='fill' style='width:"+k.pct+"%;background:"+(k.done?"var(--good)":(k.need!=null&&k.need>540?"var(--warn)":"var(--brand)"))+"'></div>"+
+        "<div class='tick' style='left:"+pace+"%'></div></div>"+
+      "<div class='foot'><span class='num'>"+hm(k.worked+k.credit)+" / "+hm(k.target)+"</span><span>"+k.pct.toFixed(0)+"%</span></div>"+
+    "</div>";
+  });
+  $("team").innerHTML=html;
+  $("teamSub").textContent="· "+S.members.length+"명 · 기대 페이스 "+pace.toFixed(0)+"%";
+  const avg=sp.rem>0?(st-sw)/(S.members.length||1)/sp.rem:null;
+  $("teamNote").innerHTML=
+    "팀 평균 진행률 <b>"+(st?(sw/st*100).toFixed(1):0)+"%</b> · 평균 하루 필요 <b class='num'>"+(avg!=null?hm(Math.max(0,avg)):"–")+"</b>"+
+    " · 목표 달성 <b>"+doneN+"명</b> · 하루 9시간 초과 필요 <b style='color:"+(risk?"var(--warn)":"var(--ink)")+"'>"+risk+"명</b>"+
+    "<br><span style='color:var(--muted)'>누적 값은 FLEX ‘휴가 시간 포함’ 기준. 검은 눈금은 오늘까지의 기대 페이스."+
+    (sync.on?" 값을 고치면 자동으로 팀에 저장됩니다.":" 지금은 이 브라우저에만 저장됩니다.")+"</span>";
+
+  $("formula").innerHTML="<span class='num'>"+S.weekBase+" × ("+mi.n+" ÷ 7)</span> = <b class='num'>"+hm(mi.base)+"</b>"+
+    " &nbsp;−&nbsp; 공휴일 "+mi.hc+"일 × 8:00 = <b class='num'>"+hm(mi.holMin)+"</b>"+
+    " &nbsp;→&nbsp; <b class='num' style='color:var(--brand)'>"+ko(mi.base-mi.holMin)+"</b>"+
+    (mi.ovOn?" &nbsp;·&nbsp; FLEX 값 "+ko(mi.target)+"으로 고정 중":"");
+  const hols=mi.L.filter(x=>x.hol);
+  $("holChips").innerHTML= hols.length? hols.map(x=> x.wd
+      ? "<label class='chip'><input type='checkbox' data-hol='"+x.key+"' "+(S.holOff[x.key]?"":"checked")+"><b>"+x.d+"일("+DOW[x.w]+")</b> "+x.hol+" −8:00</label>"
+      : "<span class='chip dim'><b>"+x.d+"일("+DOW[x.w]+")</b> "+x.hol+" · 차감 없음</span>"
+    ).join("") : "<span style='color:var(--muted);font-size:13px'>이번 달 공휴일 없음</span>";
+
+  let rows="";
+  for(let h=420;h<=630;h+=30){
+    const total=c.worked+c.credit+h*c.days, diff=total-mi.target;
+    let reach="–";
+    if(c.done) reach="이미 달성";
+    else{ let acc=c.worked+c.credit,hit=null;
+      for(const x of sp.list){ acc+=h; if(acc>=mi.target){hit=x;break;} }
+      reach=hit?mi.m+"/"+hit.d+"("+DOW[hit.w]+")":"미달"; }
+    const l=level(h,false), near=c.need!=null&&Math.abs(h-c.need)<15;
+    rows+="<tr"+(near?" style='background:var(--brand-wash);font-weight:650'":"")+">"+
+      "<td class='num'>"+hm(h)+(near?" ← 권장":"")+"</td><td class='num'>"+hm(total)+"</td>"+
+      "<td class='num' style='color:"+(diff>=0?"var(--good)":"var(--crit)")+"'>"+(diff>=0?"+":"")+hm(diff)+"</td>"+
+      "<td>"+reach+"</td><td><span class='pill "+l.c+"'>"+l.i+" "+l.t+"</span></td></tr>";
+  }
+  document.querySelector("#scen tbody").innerHTML=rows;
+
+  const wi=$("myWorked");
+  if(document.activeElement!==wi){ wi.value=S.useDaily?hm(dailySum(mi)):M.worked; }
+  wi.disabled=S.useDaily;
+  const ai=$("myAnnual"); if(document.activeElement!==ai) ai.value=M.annual;
+  saveLocal();
+}
+
+function timeline(need){
+  const s=toMin(S.startAt), br=toMin(S.breakAt)||0, out=$("coreText");
+  if(s==null){ out.textContent="출근 시각을 09:30 형태로"; $("timeline").innerHTML=""; return; }
+  const e=s+need+br, cS=660, cE=960, ok=s<=cS&&e>=cE;
+  out.innerHTML=clock(s)+" → <b>"+clock(e)+"</b> <span style='font-weight:400;color:var(--ink-2);font-size:14px'>(근무 "+hm(need)+" + 휴게 "+hm(br)+")</span> "+
+    "<span class='pill "+(ok?"p-good":"p-warn")+"' style='margin-left:6px'>"+(ok?"✓ 코어타임 충족":"▲ 코어타임 미충족")+"</span>";
+  const T0=420,T1=1320,sp=T1-T0,P=t=>(Math.min(Math.max(t,T0),T1)-T0)/sp*100;
+  let g="";
+  for(let t=T0;t<=T1;t+=60)
+    g+="<div style='position:absolute;left:"+P(t)+"%;top:0;bottom:0;width:1px;background:var(--line)'></div>"+
+       "<div style='position:absolute;left:"+P(t)+"%;bottom:1px;transform:translateX(3px);font-size:10px;color:var(--muted)'>"+(t/60)+"</div>";
+  $("timeline").innerHTML=g+
+    "<div style='position:absolute;z-index:1;left:"+P(cS)+"%;width:"+(P(cE)-P(cS))+"%;top:0;bottom:0;background:var(--warn-wash);border-left:2px solid var(--warn);border-right:2px solid var(--warn)'></div>"+
+    "<div style='position:absolute;z-index:3;left:"+P(cS)+"%;top:1px;transform:translateX(5px);font-size:10.5px;font-weight:700;color:var(--warn)'>코어타임</div>"+
+    "<div style='position:absolute;z-index:2;left:"+P(s)+"%;width:"+Math.max(0,P(e)-P(s))+"%;top:14px;height:18px;background:var(--brand);border-radius:5px;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;white-space:nowrap;box-shadow:0 0 0 2px var(--sunk)'>"+
+      (P(e)-P(s)>14?clock(s)+" – "+clock(e):"")+"</div>";
+}
+
+function renderDays(){
+  const mi=month(); let h=""; const lead=(mi.L[0].w+6)%7;
+  for(let i=0;i<lead;i++) h+="<div></div>";
+  mi.L.forEach(x=>{
+    const cls=["dcell"]; if(!x.work)cls.push("off"); if(x.hol)cls.push("hol"); if(x.key===S.today)cls.push("today");
+    h+="<div class='"+cls.join(" ")+"'><div class='d'>"+x.d+"<span>"+DOW[x.w]+"</span></div>"+
+      (x.hol?"<div class='hn'>"+x.hol+"</div>"
+            :"<input type='text' class='num' data-day='"+x.key+"' value='"+esc(S.daily[x.key]||"")+"'>")+"</div>";
+  });
+  $("days").innerHTML=h;
+}
+function fillWho(){
+  const sel=$("whoami");
+  sel.innerHTML=S.members.map(m=>"<option"+(m.name===S.whoami?" selected":"")+">"+esc(m.name)+"</option>").join("");
+  if(!S.whoami&&S.members[0]) S.whoami=S.members[0].name;
+  sel.value=S.whoami;
+}
+function months(){
+  const y=new Date().getFullYear(), o=[];
+  [y,y+1].forEach(yy=>{ for(let m=1;m<=12;m++) o.push("<option value='"+yy+"-"+pad(m)+"'>"+yy+"년 "+m+"월</option>"); });
+  $("ym").innerHTML=o.join(""); $("ym").value=S.ym;
+}
+
+/* ── 이벤트 ── */
+function bind(){
+  $("ym").onchange=e=>{S.ym=e.target.value; renderDays(); render(); pull(true);};
+  $("today").onchange=e=>{S.today=e.target.value; renderDays(); render();};
+  $("whoami").onchange=e=>{S.whoami=e.target.value; render();};
+  $("theme").onclick=()=>document.documentElement.setAttribute("data-theme",
+    document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");
+  $("incToday").onchange=e=>{S.incToday=e.target.checked; render();};
+  $("myWorked").oninput=e=>{const M=me(); M.worked=e.target.value; render(); pushSoon(M.name);};
+  $("myAnnual").oninput=e=>{const M=me(); M.annual=e.target.value; render(); pushSoon(M.name);};
+  ["startAt","breakAt"].forEach(k=>$(k).oninput=e=>{S[k]=e.target.value; render();});
+  $("override").oninput=e=>{S.override=e.target.value; render();};
+  $("weekBase").onchange=e=>{S.weekBase=Number(e.target.value); render();};
+  $("useDaily").onchange=e=>{S.useDaily=e.target.checked; render();};
+  $("reload").onclick=()=>pull(false);
+
+  $("holChips").onchange=e=>{ const k=e.target.getAttribute("data-hol"); if(!k)return;
+    if(e.target.checked) delete S.holOff[k]; else S.holOff[k]=true; renderDays(); render(); };
+  $("days").oninput=e=>{ const k=e.target.getAttribute("data-day"); if(!k)return;
+    S.daily[k]=e.target.value; render(); };
+
+  $("team").addEventListener("input",e=>{
+    const i=e.target.getAttribute("data-i"); if(i==null) return;
+    const key=e.target.getAttribute("data-k"), pos=e.target.selectionStart;
+    S.members[+i][key]=e.target.value;
+    const nm=S.members[+i].name;
+    render();
+    const again=document.querySelector("#team [data-i='"+i+"'][data-k='"+key+"']");
+    if(again){ again.focus(); try{again.setSelectionRange(pos,pos);}catch(_){} }
+    pushSoon(nm);
+  });
+  $("addM").onclick=()=>{ const n=prompt("팀원 이름"); if(!n) return;
+    if(S.members.some(m=>m.name===n)) return;
+    S.members.push({name:n,worked:"",annual:"0"}); fillWho(); render(); pushSoon(n); };
+  $("delM").onclick=()=>{ for(let i=S.members.length-1;i>=0;i--){
+      if(S.members[i].name!==S.whoami){ S.members.splice(i,1); break; } }
+    fillWho(); render(); };
+
+  const box=$("json"), msg=$("saveMsg");
+  const say=t=>{msg.textContent=t; setTimeout(()=>{if(msg.textContent===t)msg.textContent="";},2500);};
+  $("bExport").onclick=()=>{box.value=JSON.stringify(S,null,2); say("만들었습니다.");};
+  $("bCopy").onclick=async()=>{ if(!box.value) box.value=JSON.stringify(S,null,2);
+    try{await navigator.clipboard.writeText(box.value); say("복사했습니다.");}catch(_){box.select();say("Ctrl/Cmd+C");} };
+  $("bDown").onclick=()=>{ const b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="flex-plan-"+S.ym+".json";
+    document.body.appendChild(a); a.click(); a.remove(); say("저장 시작"); };
+  $("bImport").onclick=()=>{ try{ const o=JSON.parse(box.value);
+      Object.keys(S).forEach(k=>{ if(k in o) S[k]=o[k]; });
+      syncInputs(); fillWho(); renderDays(); render(); say("불러왔습니다.");
+    }catch(_){ say("JSON 형식을 확인해 주세요."); } };
+}
+function syncInputs(){
+  $("ym").value=S.ym; $("today").value=S.today;
+  $("startAt").value=S.startAt; $("breakAt").value=S.breakAt;
+  $("override").value=S.override;
+  $("incToday").checked=!!S.incToday; $("useDaily").checked=!!S.useDaily;
+  $("weekBase").value=String(S.weekBase);
+}
+
+/* ── 시작 ── */
+const now=new Date();
+S.ym=now.getFullYear()+"-"+pad(now.getMonth()+1);
+S.today=iso(now);
+S.members=CONFIG.members.map(n=>({name:n,worked:"",annual:"0"}));
+loadLocal();
+if(!S.whoami) S.whoami=S.members[0]?S.members[0].name:"";
+if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)
+  document.documentElement.setAttribute("data-theme","dark");
+
+$("setup").hidden = sync.on;
+$("syncbar").hidden = !sync.on;
+months(); syncInputs(); fillWho(); bind(); renderDays(); render();
+
+if(sync.on){
+  pull(false);
+  setInterval(()=>{ if(!document.hidden && !document.activeElement.matches("input,select,textarea")) pull(true); },
+    Math.max(15,CONFIG.pollSeconds)*1000);
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) pull(true); });
+}
+})();
+</script>
+</body>
+</html>

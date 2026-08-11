@@ -235,7 +235,7 @@
 </details>
 
 <details>
-  <summary>일별 근무 기록 <span class="hint">내 브라우저에만 저장됩니다</span></summary>
+  <summary>일별 근무 기록 <span class="hint">이름별로 팀 시트에 저장됩니다</span></summary>
   <div class="dbody">
     <label class="check"><input type="checkbox" id="useDaily"> 일별 합계를 내 누적 근무시간으로 사용</label>
     <div class="dowhead"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span></div>
@@ -289,7 +289,7 @@ const LS="flexPlanner.v3";
 
 const S={
   ym:"2026-08", today:"2026-08-05", weekBase:40, holOff:{}, override:"",
-  incToday:true, useDaily:false, daily:{}, startAt:"09:30", breakAt:"1:00",
+  incToday:true, startAt:"09:30", breakAt:"1:00",
   whoami:"", members:[]
 };
 let sync={on:!!CONFIG.apiUrl, state:"idle", last:null, saving:0, err:""};
@@ -340,16 +340,20 @@ function split(mi){
     if(c>0||(c===0&&S.incToday)){rem++;list.push(x);} });
   return {rem,list,past:mi.workDays-rem};
 }
-const me=()=>S.members.find(x=>x.name===S.whoami)||S.members[0]||{name:"",worked:"",annual:"0"};
-function dailySum(mi){ let s=0;
-  mi.L.forEach(x=>{ const r=(S.daily[x.key]||"").trim(); if(!r)return;
+function norm(m){ if(!m) return m; if(!m.daily||typeof m.daily!=="object") m.daily={};
+  if(m.useDaily==null) m.useDaily=false; if(m.worked==null) m.worked="";
+  if(m.annual==null) m.annual="0"; return m; }
+const me=()=>norm(S.members.find(x=>x.name===S.whoami)||S.members[0]||{name:"",worked:"",annual:"0",daily:{},useDaily:false});
+function dailySum(mi,daily){ let s=0; daily=daily||{};
+  mi.L.forEach(x=>{ const r=(daily[x.key]||"").trim(); if(!r)return;
     if(/^연/.test(r)){s+=480;return;} if(/^반/.test(r)){s+=240;return;}
     const v=toMin(r); if(v)s+=v; });
   return s; }
+/* 이 사람의 유효 누적(분): 일별 사용 시 일별 합계, 아니면 직접 입력값 */
+function effMin(mb,mi){ mi=mi||month(); return mb.useDaily? dailySum(mi,mb.daily) : (toMin(mb.worked)||0); }
 function calc(mb,mi,sp){
   const av=Math.max(0,parseFloat(mb.annual)||0);
-  const isMe=mb.name===S.whoami;
-  const worked=(isMe&&S.useDaily)? dailySum(mi) : (toMin(mb.worked)||0);
+  const worked=effMin(mb,mi);
   const credit=Math.round(av*480), rem=mi.target-worked-credit;
   const days=Math.max(0,sp.rem-av);
   return {worked,credit,target:mi.target,rem,days,
@@ -402,12 +406,20 @@ async function pull(silent){
     // 순서는 CONFIG.members 고정 → 카드가 저장할 때마다 뒤바뀌지 않게. 서버에만 있는 이름은 뒤에 붙임.
     const extra=(j.rows||[]).map(x=>x.name).filter(n=>CONFIG.members.indexOf(n)<0).sort();
     const names=[...new Set([...CONFIG.members, ...extra])];
-    S.members=names.map(n=>({
-      name:n,
-      worked:byName[n]? String(byName[n].worked||"") : (S.members.find(m=>m.name===n)?.worked||""),
-      annual:byName[n]? String(byName[n].annual||"0") : (S.members.find(m=>m.name===n)?.annual||"0"),
-      at:byName[n]?byName[n].updatedAt:null
-    }));
+    S.members=names.map(n=>{
+      const prev=S.members.find(m=>m.name===n), row=byName[n];
+      if(!row) return prev? norm(prev) : {name:n,worked:"",annual:"0",daily:{},useDaily:false};
+      // '일별' 열(JSON): {u:사용여부, m:직접입력 누적, d:{날짜:값}}
+      let dj=null; try{ dj=row.daily? JSON.parse(row.daily):null; }catch(_){ dj=null; }
+      return {
+        name:n,
+        worked: dj? String(dj.m||"") : String(row.worked||""),
+        annual: String(row.annual||"0"),
+        daily:  dj&&dj.d&&typeof dj.d==="object"? dj.d : {},
+        useDaily: dj? !!dj.u : false,
+        at: row.updatedAt||null
+      };
+    });
     sync.last=new Date();
     setSync("ok","팀과 동기화됨 · "+sync.last.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})+" 기준");
     fillWho(); render();
@@ -424,10 +436,14 @@ function pushSoon(name){
 }
 async function push(name){
   if(!sync.on) return;
-  const mb=S.members.find(x=>x.name===name); if(!mb) return;
+  const mb=norm(S.members.find(x=>x.name===name)); if(!mb) return;
   setSync("idle","저장 중…");
   try{
-    const j=await jsonp({key:CONFIG.key, action:"save", month:S.ym, name:mb.name, worked:mb.worked, annual:mb.annual});
+    // 누적 열엔 읽기 좋은 값: 일별 모드면 합계, 아니면 직접 입력값 그대로
+    const eff=mb.useDaily? hm(dailySum(month(),mb.daily)) : (mb.worked||"");
+    const daily=JSON.stringify({u:mb.useDaily?1:0, m:mb.worked||"", d:mb.daily||{}});
+    const j=await jsonp({key:CONFIG.key, action:"save", month:S.ym, name:mb.name,
+                         worked:eff, annual:mb.annual, daily:daily});
     if(!j.ok) throw new Error(j.error||"서버 오류");
     sync.last=new Date();
     setSync("ok","저장 완료 · "+sync.last.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}));
@@ -438,7 +454,7 @@ async function push(name){
 function saveLocal(){
   try{ localStorage.setItem(LS,JSON.stringify({
     whoami:S.whoami, today:S.today, startAt:S.startAt, breakAt:S.breakAt,
-    incToday:S.incToday, useDaily:S.useDaily, daily:S.daily,
+    incToday:S.incToday,
     holOff:S.holOff, override:S.override, weekBase:S.weekBase,
     members: sync.on? null : S.members
   })); }catch(_){}
@@ -447,11 +463,9 @@ function loadLocal(){
   try{ const o=JSON.parse(localStorage.getItem(LS)||"null"); if(!o) return;
     ["whoami","today","startAt","breakAt","override"].forEach(k=>{ if(o[k]!=null) S[k]=o[k]; });
     if(o.incToday!=null) S.incToday=o.incToday;
-    if(o.useDaily!=null) S.useDaily=o.useDaily;
-    if(o.daily) S.daily=o.daily;
     if(o.holOff) S.holOff=o.holOff;
     if(o.weekBase) S.weekBase=o.weekBase;
-    if(o.members&&o.members.length&&!sync.on) S.members=o.members;
+    if(o.members&&o.members.length&&!sync.on) S.members=o.members.map(norm);
   }catch(_){}
 }
 
@@ -496,7 +510,7 @@ function render(){
       "<div class='row2'>"+
         "<div><div class='needcap'>하루 필요</div><div class='need num'>"+(k.done?"–":(k.days>0?hm(k.need):"–"))+"</div></div>"+
         "<div style='display:flex;gap:8px'>"+
-          "<div><span class='lbl'>누적</span><input type='text' class='num' data-i='"+i+"' data-k='worked' value='"+esc(mb.worked)+"'"+(isMe&&S.useDaily?" disabled":"")+"></div>"+
+          "<div><span class='lbl'>누적</span><input type='text' class='num' data-i='"+i+"' data-k='worked' value='"+(mb.useDaily?hm(k.worked):esc(mb.worked))+"'"+(mb.useDaily?" disabled title='일별 사용 중'":"")+"></div>"+
           "<div><span class='lbl'>연차</span><input type='text' class='num' data-i='"+i+"' data-k='annual' value='"+esc(mb.annual)+"' style='width:52px'></div>"+
         "</div></div>"+
       "<div class='track'><div class='fill' style='width:"+k.pct+"%;background:"+(k.done?"var(--good)":(k.need!=null&&k.need>540?"var(--warn)":"var(--brand)"))+"'></div>"+
@@ -540,9 +554,10 @@ function render(){
   document.querySelector("#scen tbody").innerHTML=rows;
 
   const wi=$("myWorked");
-  if(document.activeElement!==wi){ wi.value=S.useDaily?hm(dailySum(mi)):M.worked; }
-  wi.disabled=S.useDaily;
+  if(document.activeElement!==wi){ wi.value=M.useDaily?hm(dailySum(mi,M.daily)):M.worked; }
+  wi.disabled=M.useDaily;
   const ai=$("myAnnual"); if(document.activeElement!==ai) ai.value=M.annual;
+  const ud=$("useDaily"); if(ud) ud.checked=!!M.useDaily;
   saveLocal();
 }
 
@@ -571,7 +586,7 @@ function renderDays(){
     const cls=["dcell"]; if(!x.work)cls.push("off"); if(x.hol)cls.push("hol"); if(x.key===S.today)cls.push("today");
     h+="<div class='"+cls.join(" ")+"'><div class='d'>"+x.d+"<span>"+DOW[x.w]+"</span></div>"+
       (x.hol?"<div class='hn'>"+x.hol+"</div>"
-            :"<input type='text' class='num' data-day='"+x.key+"' value='"+esc(S.daily[x.key]||"")+"'>")+"</div>";
+            :"<input type='text' class='num' data-day='"+x.key+"' value='"+esc((me().daily||{})[x.key]||"")+"'>")+"</div>";
   });
   $("days").innerHTML=h;
 }
@@ -591,7 +606,7 @@ function months(){
 function bind(){
   $("ym").onchange=e=>{S.ym=e.target.value; renderDays(); render(); pull(true);};
   $("today").onchange=e=>{S.today=e.target.value; renderDays(); render();};
-  $("whoami").onchange=e=>{S.whoami=e.target.value; render();};
+  $("whoami").onchange=e=>{S.whoami=e.target.value; renderDays(); render();};
   $("theme").onclick=()=>document.documentElement.setAttribute("data-theme",
     document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");
   $("incToday").onchange=e=>{S.incToday=e.target.checked; render();};
@@ -600,13 +615,13 @@ function bind(){
   ["startAt","breakAt"].forEach(k=>$(k).oninput=e=>{S[k]=e.target.value; render();});
   $("override").oninput=e=>{S.override=e.target.value; render();};
   $("weekBase").onchange=e=>{S.weekBase=Number(e.target.value); render();};
-  $("useDaily").onchange=e=>{S.useDaily=e.target.checked; render();};
+  $("useDaily").onchange=e=>{const M=me(); M.useDaily=e.target.checked; render(); pushSoon(M.name);};
   $("reload").onclick=()=>pull(false);
 
   $("holChips").onchange=e=>{ const k=e.target.getAttribute("data-hol"); if(!k)return;
     if(e.target.checked) delete S.holOff[k]; else S.holOff[k]=true; renderDays(); render(); };
   $("days").oninput=e=>{ const k=e.target.getAttribute("data-day"); if(!k)return;
-    S.daily[k]=e.target.value; render(); };
+    const M=me(); M.daily[k]=e.target.value; render(); pushSoon(M.name); };
 
   $("team").addEventListener("input",e=>{
     const i=e.target.getAttribute("data-i"); if(i==null) return;
@@ -620,7 +635,7 @@ function bind(){
   });
   $("addM").onclick=()=>{ const n=prompt("팀원 이름"); if(!n) return;
     if(S.members.some(m=>m.name===n)) return;
-    S.members.push({name:n,worked:"",annual:"0"}); fillWho(); render(); pushSoon(n); };
+    S.members.push({name:n,worked:"",annual:"0",daily:{},useDaily:false}); fillWho(); render(); pushSoon(n); };
   $("delM").onclick=()=>{ for(let i=S.members.length-1;i>=0;i--){
       if(S.members[i].name!==S.whoami){ S.members.splice(i,1); break; } }
     fillWho(); render(); };
@@ -642,7 +657,7 @@ function syncInputs(){
   $("ym").value=S.ym; $("today").value=S.today;
   $("startAt").value=S.startAt; $("breakAt").value=S.breakAt;
   $("override").value=S.override;
-  $("incToday").checked=!!S.incToday; $("useDaily").checked=!!S.useDaily;
+  $("incToday").checked=!!S.incToday; $("useDaily").checked=!!me().useDaily;
   $("weekBase").value=String(S.weekBase);
 }
 
@@ -650,7 +665,7 @@ function syncInputs(){
 const now=new Date();
 S.ym=now.getFullYear()+"-"+pad(now.getMonth()+1);
 S.today=iso(now);
-S.members=CONFIG.members.map(n=>({name:n,worked:"",annual:"0"}));
+S.members=CONFIG.members.map(n=>({name:n,worked:"",annual:"0",daily:{},useDaily:false}));
 loadLocal();
 if(!S.whoami) S.whoami=S.members[0]?S.members[0].name:"";
 if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)

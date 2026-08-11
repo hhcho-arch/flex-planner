@@ -372,13 +372,31 @@ function setSync(state,msg){
   d.className="dot "+(state==="ok"?"on":state==="err"?"err":"off");
   t.textContent=msg;
 }
+/* ── JSONP: <script> 태그로 불러와 CORS를 완전히 우회합니다.
+   Apps Script /exec 는 script.googleusercontent.com 으로 리다이렉트되는데,
+   브라우저 fetch()의 POST(그리고 일부 브라우저의 GET)는 이 리다이렉트 과정에서
+   CORS에 막혀 "읽기는 되는데 저장은 안 되는(=남의 화면에 반영 안 됨)" 증상이 납니다.
+   JSONP는 CORS 자체가 적용되지 않아 모든 브라우저에서 읽기·저장이 동작합니다.
+   (Code.gs가 callback 파라미터를 이미 지원합니다.) */
+let jsonpN=0;
+function jsonp(params){
+  return new Promise((resolve,reject)=>{
+    const cb="__flexCb"+(++jsonpN);
+    const s=document.createElement("script");
+    const timer=setTimeout(()=>{done();reject(new Error("시간 초과"));},20000);
+    function done(){ clearTimeout(timer); try{delete window[cb];}catch(_){window[cb]=undefined;} s.remove(); }
+    window[cb]=data=>{ done(); resolve(data); };
+    s.onerror=()=>{ done(); reject(new Error("네트워크")); };
+    const q=Object.keys(params).map(k=>encodeURIComponent(k)+"="+encodeURIComponent(params[k])).join("&");
+    s.src=CONFIG.apiUrl+"?"+q+"&callback="+cb+"&t="+Date.now();
+    document.head.appendChild(s);
+  });
+}
 async function pull(silent){
   if(!sync.on) return;
   if(!silent) setSync("idle","읽는 중…");
   try{
-    const u=CONFIG.apiUrl+"?key="+encodeURIComponent(CONFIG.key)+"&month="+encodeURIComponent(S.ym)+"&t="+Date.now();
-    const r=await fetch(u,{method:"GET"});
-    const j=await r.json();
+    const j=await jsonp({key:CONFIG.key, month:S.ym});
     if(!j.ok) throw new Error(j.error||"서버 오류");
     const byName={}; (j.rows||[]).forEach(x=>byName[x.name]=x);
     // 순서는 CONFIG.members 고정 → 카드가 저장할 때마다 뒤바뀌지 않게. 서버에만 있는 이름은 뒤에 붙임.
@@ -409,9 +427,7 @@ async function push(name){
   const mb=S.members.find(x=>x.name===name); if(!mb) return;
   setSync("idle","저장 중…");
   try{
-    const r=await fetch(CONFIG.apiUrl,{method:"POST",
-      body:JSON.stringify({key:CONFIG.key,month:S.ym,name:mb.name,worked:mb.worked,annual:mb.annual})});
-    const j=await r.json();
+    const j=await jsonp({key:CONFIG.key, action:"save", month:S.ym, name:mb.name, worked:mb.worked, annual:mb.annual});
     if(!j.ok) throw new Error(j.error||"서버 오류");
     sync.last=new Date();
     setSync("ok","저장 완료 · "+sync.last.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}));

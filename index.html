@@ -354,9 +354,11 @@ function effMin(mb,mi){ mi=mi||month(); return mb.useDaily? dailySum(mi,mb.daily
 function calc(mb,mi,sp){
   const av=Math.max(0,parseFloat(mb.annual)||0);
   const worked=effMin(mb,mi);
+  // 일별 그리드에 값이 이미 채워진 '미래' 근무일 = 계획된 날 → 남은(빈) 근무일에서 제외
+  const planned=mb.useDaily? sp.list.filter(x=>(((mb.daily||{})[x.key])||"").trim()!=="").length : 0;
   const credit=Math.round(av*480), rem=mi.target-worked-credit;
-  const days=Math.max(0,sp.rem-av);
-  return {worked,credit,target:mi.target,rem,days,
+  const days=Math.max(0,sp.rem-planned-av);
+  return {worked,credit,target:mi.target,rem,days,planned,
           need:days>0?rem/days:null, done:rem<=0,
           pct:mi.target?Math.min(100,(worked+credit)/mi.target*100):0, av};
 }
@@ -396,7 +398,7 @@ function jsonp(params){
     document.head.appendChild(s);
   });
 }
-async function pull(silent){
+async function pull(silent,keepSelf){
   if(!sync.on) return;
   if(!silent) setSync("idle","읽는 중…");
   try{
@@ -408,6 +410,8 @@ async function pull(silent){
     const names=[...new Set([...CONFIG.members, ...extra])];
     S.members=names.map(n=>{
       const prev=S.members.find(m=>m.name===n), row=byName[n];
+      // 자동 폴링(keepSelf)에서는 '내' 데이터를 서버로 덮어쓰지 않음 → 입력 중이던 일별이 날아가지 않게
+      if(keepSelf && n===S.whoami && prev) return norm(prev);
       if(!row) return prev? norm(prev) : {name:n,worked:"",annual:"0",daily:{},useDaily:false};
       // '일별' 열(JSON): {u:사용여부, m:직접입력 누적, d:{날짜:값}}
       let dj=null; try{ dj=row.daily? JSON.parse(row.daily):null; }catch(_){ dj=null; }
@@ -481,15 +485,16 @@ function render(){
   ].map(([k,v])=>"<div class='item'><div class='k'>"+k+"</div><div class='v num'>"+v+"</div></div>").join("");
 
   const lv=level(c.need,c.done);
-  $("heroCap").textContent=(M.name?M.name+" · ":"")+"남은 근무일 "+c.days+"일 · 하루 평균";
+  $("heroCap").textContent=(M.name?M.name+" · ":"")+"남은(미입력) 근무일 "+c.days+"일 · 하루 평균";
   $("heroFig").textContent=c.done?"달성 완료":(c.days>0?hm(c.need):"–");
   $("heroPill").innerHTML="<span class='pill "+lv.c+"'>"+lv.i+" "+lv.t+"</span>";
   $("heroSide").innerHTML= c.done
     ? "목표를 <b>"+ko(-c.rem)+"</b> 초과했습니다. 초과분이 연장근로 신청·승인 대상인지 확인하세요."
     : (c.days>0
       ? "남은 <b>"+ko(c.rem)+"</b>을 "+c.days+"일에 나눈 값입니다.<br>표준 8시간 대비 <b>"+(c.need-480>=0?"+":"")+hm(c.need-480)+"</b>"
+        +(c.planned?" · 일별에 채운 "+c.planned+"일은 제외":"")
         +(c.av?" · 연차 "+c.av+"일("+ko(c.credit)+") 인정 반영":"")
-      : "남은 근무일이 없습니다. 미달 <b>"+ko(c.rem)+"</b>은 급여 공제 대상이 될 수 있어요.");
+      : "채울 근무일이 없습니다"+(c.rem>0?". 계획대로면 <b>"+ko(c.rem)+"</b> 부족 — 남은 날 근무를 늘리거나 연차로 채워야 해요.":". 목표를 채웠습니다."));
 
   const pace=mi.workDays?Math.min(100,sp.past/mi.workDays*100):0;
   const f=$("myFill"); f.style.width=c.pct+"%"; f.style.background=c.done?"var(--good)":"var(--brand)";
@@ -537,13 +542,15 @@ function render(){
       : "<span class='chip dim'><b>"+x.d+"일("+DOW[x.w]+")</b> "+x.hol+" · 차감 없음</span>"
     ).join("") : "<span style='color:var(--muted);font-size:13px'>이번 달 공휴일 없음</span>";
 
+  // 시나리오는 '미입력(빈)' 근무일에만 h시간씩 배분 — 이미 채운 미래 날은 제외
+  const blankList=M.useDaily? sp.list.filter(x=>!(((M.daily||{})[x.key])||"").trim()) : sp.list;
   let rows="";
   for(let h=420;h<=630;h+=30){
     const total=c.worked+c.credit+h*c.days, diff=total-mi.target;
     let reach="–";
     if(c.done) reach="이미 달성";
     else{ let acc=c.worked+c.credit,hit=null;
-      for(const x of sp.list){ acc+=h; if(acc>=mi.target){hit=x;break;} }
+      for(const x of blankList){ acc+=h; if(acc>=mi.target){hit=x;break;} }
       reach=hit?mi.m+"/"+hit.d+"("+DOW[hit.w]+")":"미달"; }
     const l=level(h,false), near=c.need!=null&&Math.abs(h-c.need)<15;
     rows+="<tr"+(near?" style='background:var(--brand-wash);font-weight:650'":"")+">"+
@@ -677,9 +684,10 @@ months(); syncInputs(); fillWho(); bind(); renderDays(); render();
 
 if(sync.on){
   pull(false);
-  setInterval(()=>{ if(!document.hidden && !document.activeElement.matches("input,select,textarea")) pull(true); },
+  // 자동 새로고침은 keepSelf=true → 남의 최신 값만 갱신하고, 내가 입력 중인 값은 로컬 유지
+  setInterval(()=>{ if(!document.hidden && !document.activeElement.matches("input,select,textarea")) pull(true,true); },
     Math.max(15,CONFIG.pollSeconds)*1000);
-  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) pull(true); });
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) pull(true,true); });
 }
 })();
 </script>

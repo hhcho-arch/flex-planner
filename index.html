@@ -427,7 +427,10 @@ async function pull(silent,keepSelf){
     });
     sync.last=new Date();
     setSync("ok","팀과 동기화됨 · "+sync.last.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})+" 기준");
-    fillWho(); render();
+    fillWho();
+    // 서버에서 읽어온 '내' 일별을 달력 그리드에도 반영 — 단, 입력 중이면 건드리지 않음
+    if(!document.activeElement||!document.activeElement.matches("#days input")) renderDays();
+    render();
   }catch(e){
     setSync("err","동기화 실패 — 잠시 후 다시 시도합니다 ("+e.message+")");
   }

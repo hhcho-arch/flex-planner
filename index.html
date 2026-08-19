@@ -293,6 +293,7 @@ const S={
   whoami:"", members:[]
 };
 let sync={on:!!CONFIG.apiUrl, state:"idle", last:null, saving:0, err:""};
+let legacyDaily=null, legacyUseDaily=false;   // 옛 버전(브라우저 전역 일별) → 새 구조로 1회 복원용
 
 /* ── 유틸 ── */
 const pad=n=>String(n).padStart(2,"0");
@@ -470,7 +471,22 @@ function loadLocal(){
     if(o.holOff) S.holOff=o.holOff;
     if(o.weekBase) S.weekBase=o.weekBase;
     if(o.members&&o.members.length&&!sync.on) S.members=o.members.map(norm);
+    // 옛 버전엔 일별이 전역(o.daily)에 있었음 → saveLocal이 덮어쓰기 전에 붙잡아 뒀다가 내 것으로 복원
+    if(o.daily && typeof o.daily==="object" && Object.keys(o.daily).length){
+      legacyDaily=o.daily; legacyUseDaily=!!o.useDaily;
+    }
   }catch(_){}
+}
+/* 옛 일별을 '현재 사용자'에게 1회 복원 — 이미 값이 있으면 건드리지 않음(덮어쓰기 방지) */
+function restoreLegacyDaily(){
+  if(!legacyDaily){ return; }
+  const M=me(); if(!M||!M.name){ return; }
+  if(Object.keys(M.daily||{}).length===0){
+    M.daily=legacyDaily; if(legacyUseDaily) M.useDaily=true;
+    renderDays(); render();
+    if(sync.on) pushSoon(M.name);
+  }
+  legacyDaily=null;
 }
 
 /* ── 렌더 ── */
@@ -683,11 +699,13 @@ $("syncbar").hidden = !sync.on;
 months(); syncInputs(); fillWho(); bind(); renderDays(); render();
 
 if(sync.on){
-  pull(false);
+  pull(false).then(restoreLegacyDaily);   // 서버 로드 후, 내 일별이 비어 있으면 옛 브라우저 값 복원
   // 자동 새로고침은 keepSelf=true → 남의 최신 값만 갱신하고, 내가 입력 중인 값은 로컬 유지
   setInterval(()=>{ if(!document.hidden && !document.activeElement.matches("input,select,textarea")) pull(true,true); },
     Math.max(15,CONFIG.pollSeconds)*1000);
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden) pull(true,true); });
+} else {
+  restoreLegacyDaily();
 }
 })();
 </script>

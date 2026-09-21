@@ -269,7 +269,7 @@ const CONFIG = {
   apiUrl: "https://script.google.com/macros/s/AKfycbwtV--P4SFFSNJ1G3XnhwlWNenHrGbdX-Qivb7x6CFyMyrIfuawtj_nrn6T34pNs6u0SQ/exec",                 // 예: "https://script.google.com/macros/s/AKfy.../exec"
   key:    "AIAXLAB-flex",    // Code.gs의 SHARED_KEY와 똑같이 맞추세요
   pollSeconds: 45,            // 다른 사람 변경을 몇 초마다 다시 읽을지
-  members: ["문재영","오정은","정수빈","정원형","조현호"]   // 기본 팀원 (서버에 값이 있으면 서버 우선)
+  members: ["문재영","오정은","정수빈","조현호"]   // 기본 팀원 (서버에 값이 있으면 서버 우선)
 };
 
 (function(){
@@ -618,8 +618,9 @@ function renderDays(){
 }
 function fillWho(){
   const sel=$("whoami");
+  // 저장된 '나'가 명단에서 빠졌으면(퇴사·팀 이동 등) 첫 번째 사람으로 되돌림 — 남의 행에 덮어쓰지 않도록
+  if(!S.members.some(m=>m.name===S.whoami)) S.whoami=S.members[0]?S.members[0].name:"";
   sel.innerHTML=S.members.map(m=>"<option"+(m.name===S.whoami?" selected":"")+">"+esc(m.name)+"</option>").join("");
-  if(!S.whoami&&S.members[0]) S.whoami=S.members[0].name;
   sel.value=S.whoami;
 }
 function months(){

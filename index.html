@@ -30,6 +30,7 @@
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.4);
   }
   *{box-sizing:border-box}
+  [hidden]{display:none!important}   /* .syncbar 등 display를 지정한 상자도 hidden이면 숨김 */
   body{margin:0;background:var(--page);color:var(--ink);
     font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
     font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
@@ -127,6 +128,11 @@
   .setup ol{margin:8px 0 0;padding-left:22px}
   .setup li{margin-bottom:5px}
   .setup code{background:var(--card);padding:1px 6px;border-radius:6px;font-size:12.5px}
+  /* FLEX 자동 반영 안내 */
+  .flexinfo{font-size:13px;color:var(--ink-2);background:var(--brand-wash);border-radius:12px;padding:10px 14px;margin:-6px 0 18px;line-height:1.65}
+  .flexinfo b{color:var(--ink)}
+  .flexinfo.warn{background:var(--warn-wash)}
+  .flexinfo .sub{color:var(--muted);font-size:12.5px}
   @media (max-width:600px){
     .wrap{padding:20px 14px 80px}
     .card{padding:19px;border-radius:15px}
@@ -157,8 +163,13 @@
   <ol>
     <li>Google 스프레드시트를 새로 만들고 <b>확장 프로그램 &gt; Apps Script</b>에 <code>Code.gs</code> 내용을 붙여넣기</li>
     <li><b>배포 &gt; 새 배포 &gt; 웹 앱</b> (액세스: 모든 사용자) → 나오는 URL 복사</li>
-    <li>이 파일 아래쪽 <code>const CONFIG</code>의 <code>apiUrl</code>과 <code>key</code>를 채우고 다시 올리기</li>
+    <li>이 파일 아래쪽 <code>const CONFIG</code>의 <code>apiUrl</code>을 채우고 다시 올리기 (팀 키는 파일에 적지 않고 크롬 확장 설정에 넣습니다)</li>
   </ol>
+</div>
+
+<div class="setup" id="keyNote" hidden>
+  <h3>🔑 지금은 “혼자 쓰는 모드”입니다</h3>
+  <div id="keyNoteText"></div>
 </div>
 
 <div class="syncbar" id="syncbar" hidden>
@@ -174,6 +185,7 @@
 
 <section class="card">
   <h2>내 근무</h2>
+  <div class="flexinfo" id="flexInfo" hidden></div>
   <div class="inline">
     <label class="fld">누적 근무시간 <input type="text" id="myWorked" class="num" placeholder="16:01"></label>
     <label class="fld">앞으로 쓸 연차 (일) <input type="text" id="myAnnual" class="num" value="0"></label>
@@ -262,12 +274,14 @@
 
 <script>
 /* ═══════════════════════════════════════════════════════════════
-   ① 배포 설정 — Apps Script 웹앱 URL과 공유키를 넣으면 팀 공유가 켜집니다.
-   비워두면 이 브라우저에만 저장되는 '혼자 쓰는 모드'로 동작합니다.
+   ① 배포 설정 — Apps Script 웹앱 URL을 넣으면 팀 공유를 쓸 수 있습니다.
+   팀 키는 이 파일에 적지 않습니다(2026-11-13 변경). 이 페이지는 공개돼 있어서,
+   키는 각자 크롬 확장 'Flex 근무 계산' 설정에 넣고 확장이 이 페이지에 넘겨 줍니다.
+   키를 못 받으면 이 브라우저에만 저장되는 '혼자 쓰는 모드'로 동작합니다.
    ═══════════════════════════════════════════════════════════════ */
 const CONFIG = {
   apiUrl: "https://script.google.com/macros/s/AKfycbwtV--P4SFFSNJ1G3XnhwlWNenHrGbdX-Qivb7x6CFyMyrIfuawtj_nrn6T34pNs6u0SQ/exec",                 // 예: "https://script.google.com/macros/s/AKfy.../exec"
-  key:    "AIAXLAB-flex",    // Code.gs의 SHARED_KEY와 똑같이 맞추세요
+  key:    "",                // 비워 둡니다. 확장이 넘겨 준 팀 키가 여기에 들어갑니다
   pollSeconds: 45,            // 다른 사람 변경을 몇 초마다 다시 읽을지
   members: ["문재영","오정은","정수빈","조현호"]   // 기본 팀원 (서버에 값이 있으면 서버 우선)
 };
@@ -292,7 +306,7 @@ const S={
   incToday:true, startAt:"09:30", breakAt:"1:00",
   whoami:"", members:[]
 };
-let sync={on:!!CONFIG.apiUrl, state:"idle", last:null, saving:0, err:""};
+let sync={on:false, state:"idle", last:null, saving:0, err:""};   // 팀 키를 받으면 startSync()가 켬
 let legacyDaily=null, legacyUseDaily=false;   // 옛 버전(브라우저 전역 일별) → 새 구조로 1회 복원용
 
 /* ── 유틸 ── */
@@ -411,11 +425,13 @@ async function pull(silent,keepSelf){
     const names=[...new Set([...CONFIG.members, ...extra])];
     S.members=names.map(n=>{
       const prev=S.members.find(m=>m.name===n), row=byName[n];
+      // '일별' 열(JSON): {u:사용여부, m:직접입력 누적, d:{날짜:값}}
+      let dj=null; try{ dj=row&&row.daily? JSON.parse(row.daily):null; }catch(_){ dj=null; }
+      // 서버에 지금 저장된 누적·연차 → FLEX 값과 다르면 applyFlex가 저장
+      if(row) srv[n]=(dj? String(dj.m||"") : String(row.worked||""))+"|"+String(row.annual||"0"); else delete srv[n];
       // 자동 폴링(keepSelf)에서는 '내' 데이터를 서버로 덮어쓰지 않음 → 입력 중이던 일별이 날아가지 않게
       if(keepSelf && n===S.whoami && prev) return norm(prev);
       if(!row) return prev? norm(prev) : {name:n,worked:"",annual:"0",daily:{},useDaily:false};
-      // '일별' 열(JSON): {u:사용여부, m:직접입력 누적, d:{날짜:값}}
-      let dj=null; try{ dj=row.daily? JSON.parse(row.daily):null; }catch(_){ dj=null; }
       return {
         name:n,
         worked: dj? String(dj.m||"") : String(row.worked||""),
@@ -430,9 +446,12 @@ async function pull(silent,keepSelf){
     fillWho();
     // 서버에서 읽어온 '내' 일별을 달력 그리드에도 반영 — 단, 입력 중이면 건드리지 않음
     if(!document.activeElement||!document.activeElement.matches("#days input")) renderDays();
+    applyFlex();   // 서버 값으로 바뀐 내 카드에 FLEX 값을 다시 얹음(같으면 저장하지 않음)
     render();
   }catch(e){
-    setSync("err","동기화 실패 — 잠시 후 다시 시도합니다 ("+e.message+")");
+    setSync("err", /키/.test(e.message)
+      ? "팀 키가 맞지 않습니다 — 크롬 확장 ‘Flex 근무 계산’ 설정에서 팀 키를 확인하고 새로고침하세요"
+      : "동기화 실패 — 잠시 후 다시 시도합니다 ("+e.message+")");
   }
 }
 let pushTimer=null;
@@ -453,10 +472,69 @@ async function push(name){
     const j=await jsonp({key:CONFIG.key, action:"save", month:S.ym, name:mb.name,
                          worked:eff, annual:mb.annual, daily:daily});
     if(!j.ok) throw new Error(j.error||"서버 오류");
+    srv[mb.name]=(mb.worked||"")+"|"+String(mb.annual);
     sync.last=new Date();
     setSync("ok","저장 완료 · "+sync.last.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}));
   }catch(e){ setSync("err","저장 실패 — 값은 화면에 남아 있습니다 ("+e.message+")"); }
 }
+
+/* ── FLEX 자동 반영 ──
+   크롬 확장 'Flex 근무 계산' 1.3 이상이 설치돼 있고 FLEX에 로그인돼 있으면,
+   확장이 FLEX 값을 이 페이지로 넘겨 줍니다(postMessage). 확장이 없으면 아무 일도 일어나지 않습니다.
+   - FLEX 이름과 같은 팀원 카드에만 적용 → 다른 사람 행을 덮어쓰지 않음
+   - FLEX 정산 기간이 지금 보고 있는 달과 같을 때만 적용
+   - 일별 합계 모드를 켠 카드는 누적을 건드리지 않음
+   - 누적 = FLEX 인정시간 − 앞으로 쓸 휴가, 연차 = 앞으로 쓸 휴가 일수(오늘 포함)
+     (FLEX 인정시간에는 앞으로 쓸 휴가가 미리 더해져 있어 그대로 넣으면 휴가가 두 번 계산됨) */
+let flex=null, flexErr="";
+const srv={};   // 이름 → 서버에 저장된 "누적|연차" (pull·push 때 갱신)
+function flexValid(f){
+  return f && typeof f.name==="string" && f.name && /^\d{4}-\d{2}$/.test(f.ym||"") &&
+    [f.worked,f.annualDays,f.required,f.fetchedAt].every(v=>typeof v==="number"&&isFinite(v));
+}
+function kstClock(ts){ const k=new Date(ts+9*3600e3); return pad(k.getUTCHours())+":"+pad(k.getUTCMinutes()); }
+function applyFlex(){
+  const box=$("flexInfo");
+  if(!flex && !flexErr){ box.hidden=true; return; }
+  box.hidden=false;
+  if(!flex){ box.className="flexinfo warn"; box.innerHTML="FLEX 자동 반영을 못 했습니다 — "+esc(flexErr)+". 값은 지금처럼 직접 적어 주세요."; return; }
+  const f=flex, mb=S.members.find(m=>m.name===f.name), mi=month();
+  const at=new Date(f.fetchedAt).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+  let why="";
+  if(!f.monthAligned) why="FLEX 정산 기간("+esc(f.periodFrom)+"~"+esc(f.periodTo)+")이 달력 한 달과 달라 반영하지 않았습니다.";
+  else if(f.ym!==S.ym) why="FLEX 값은 "+esc(f.ym)+" 기준이라 지금 보는 달에는 반영하지 않았습니다.";
+  else if(!mb) why="FLEX 이름 ‘"+esc(f.name)+"’이 팀원 목록에 없어 반영하지 않았습니다.";
+  else if(mb.useDaily) why="‘일별 합계’ 모드라 누적은 그대로 두었습니다.";
+  if(why){ box.className="flexinfo warn"; box.innerHTML="<b>FLEX 연결됨</b> · "+at+" 기준 — "+why; return; }
+
+  const w=hm(f.worked), a=String(f.annualDays);
+  if(mb.worked!==w || String(mb.annual)!==a){ mb.worked=w; mb.annual=a; }
+  // 화면 값이 아니라 '서버에 저장된 값'과 비교 → 팀 키보다 FLEX 값이 먼저 와도 연결된 뒤 저장됨
+  if(sync.on && srv[mb.name]!==w+"|"+a) pushSoon(mb.name);
+  if(S.whoami===f.name && f.todayStart && S.today===iso(new Date())){
+    S.startAt=kstClock(f.todayStart);
+    if(document.activeElement!==$("startAt")) $("startAt").value=S.startAt;
+  }
+  const tgt = f.required===mi.target
+    ? "FLEX 목표 "+hm(f.required)+" (플래너와 같음)"
+    : "<b style='color:var(--warn)'>FLEX 목표 "+hm(f.required)+" ≠ 플래너 "+hm(mi.target)+"</b> — ‘목표시간 계산 근거’에서 FLEX 값으로 고정할 수 있어요";
+  box.className="flexinfo";
+  box.innerHTML="<b>FLEX 자동 반영</b> · "+at+" 기준 · "+esc(f.name)+" 카드<br>"+
+    "누적 <b class='num'>"+w+"</b>"+(f.futureLeaveMin?" (앞으로 쓸 휴가 "+hm(f.futureLeaveMin)+" → 연차 "+a+"일로 따로 계산)":"")+
+    (f.todayStart?" · 오늘 "+kstClock(f.todayStart)+" 출근, "+hm(f.todayWorked)+(f.ongoing?" 근무 중":" 근무"):" · 오늘 출근 기록 없음")+
+    " · "+tgt+
+    (S.whoami!==f.name?"<br><span class='sub'>오른쪽 위 이름을 ‘"+esc(f.name)+"’로 바꾸면 위 큰 숫자와 퇴근 시각에도 반영됩니다.</span>":"")+
+    "<br><span class='sub'>FLEX와 연결된 동안 누적·연차는 1분마다 FLEX 값으로 다시 채워집니다.</span>";
+}
+window.addEventListener("message",e=>{
+  const m=e.data;
+  if(e.source!==window || !m || m.source!=="flex-work-calc") return;
+  if(m.type==="flexcalc:config"){ onTeamKey(typeof m.key==="string"?m.key.trim():""); return; }
+  if(m.type!=="flexcalc:data") return;
+  if(m.ok && flexValid(m.data)){ flex=m.data; flexErr=""; }
+  else { flex=null; flexErr=(m.error&&String(m.error).slice(0,80))||"값을 읽지 못함"; }
+  applyFlex(); render();
+});
 
 /* ── 로컬 저장 (개인 설정 + 혼자 쓰는 모드) ── */
 function saveLocal(){
@@ -631,9 +709,9 @@ function months(){
 
 /* ── 이벤트 ── */
 function bind(){
-  $("ym").onchange=e=>{S.ym=e.target.value; renderDays(); render(); pull(true);};
+  $("ym").onchange=e=>{S.ym=e.target.value; renderDays(); applyFlex(); render(); pull(true);};
   $("today").onchange=e=>{S.today=e.target.value; renderDays(); render();};
-  $("whoami").onchange=e=>{S.whoami=e.target.value; renderDays(); render();};
+  $("whoami").onchange=e=>{S.whoami=e.target.value; renderDays(); applyFlex(); render();};
   $("theme").onclick=()=>document.documentElement.setAttribute("data-theme",
     document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");
   $("incToday").onchange=e=>{S.incToday=e.target.checked; render();};
@@ -698,19 +776,38 @@ if(!S.whoami) S.whoami=S.members[0]?S.members[0].name:"";
 if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)
   document.documentElement.setAttribute("data-theme","dark");
 
-$("setup").hidden = sync.on;
-$("syncbar").hidden = !sync.on;
+$("setup").hidden = !!CONFIG.apiUrl;   // 서버 주소조차 없을 때만 관리자용 안내
+$("syncbar").hidden = true;
 months(); syncInputs(); fillWho(); bind(); renderDays(); render();
 
-if(sync.on){
+/* ── 팀 공유 켜기: 확장이 넘겨 준 팀 키로 시작 ── */
+let keyAsked=false;
+function startSync(){
+  if(sync.on) return;
+  sync.on=true;
+  $("keyNote").hidden=true; $("syncbar").hidden=false;
   pull(false).then(restoreLegacyDaily);   // 서버 로드 후, 내 일별이 비어 있으면 옛 브라우저 값 복원
   // 자동 새로고침은 keepSelf=true → 남의 최신 값만 갱신하고, 내가 입력 중인 값은 로컬 유지
   setInterval(()=>{ if(!document.hidden && !document.activeElement.matches("input,select,textarea")) pull(true,true); },
     Math.max(15,CONFIG.pollSeconds)*1000);
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden) pull(true,true); });
-} else {
-  restoreLegacyDaily();
 }
+function showKeyNote(hasExt){
+  if(sync.on || !CONFIG.apiUrl) return;
+  $("keyNoteText").innerHTML = hasExt
+    ? "크롬 확장 <b>Flex 근무 계산</b>의 설정(툴바 아이콘 → 설정)에 <b>팀 키</b>를 넣고 이 페이지를 새로고침하세요. 팀 키는 팀 관리자에게 받으세요."
+    : "팀 공유를 켜려면 크롬 확장 <b>Flex 근무 계산</b>(1.4 이상)을 설치하고, 확장 설정에 <b>팀 키</b>를 넣어 주세요. 그전까지 입력값은 이 브라우저에만 저장됩니다.";
+  $("keyNote").hidden=false;
+}
+function onTeamKey(k){
+  keyAsked=true;
+  if(!CONFIG.apiUrl) return;
+  if(k){ CONFIG.key=k; startSync(); } else showKeyNote(true);
+}
+// 확장(bridge.js)이 먼저 떠 있었으면 다시 보내 달라고 요청. 확장이 없으면 아무도 답하지 않음
+window.postMessage({source:"flex-planner",type:"flexcalc:request"},"*");
+if(CONFIG.apiUrl) setTimeout(()=>{ if(!keyAsked) showKeyNote(false); }, 2000);
+else restoreLegacyDaily();   // 서버 없이 쓰는 배포본만 바로 복원(팀용은 서버를 읽은 뒤 복원)
 })();
 </script>
 </body>

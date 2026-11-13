@@ -50,16 +50,50 @@
   button.pri:hover{filter:brightness(1.08)}
   .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:var(--shadow);margin-bottom:18px}
   .card > h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 18px;font-weight:700}
-  .summary{display:flex;flex-wrap:wrap;gap:8px 34px;align-items:baseline}
-  .summary .item{display:flex;flex-direction:column;gap:1px}
-  .summary .k{font-size:12.5px;color:var(--muted)}
-  .summary .v{font-size:22px;font-weight:660;letter-spacing:-.02em}
-  .summary .v em{font-style:normal;font-size:13px;font-weight:500;color:var(--ink-2);margin-left:3px}
-  .hero{display:flex;gap:30px;align-items:center;flex-wrap:wrap}
-  .hero .figure{font-size:60px;font-weight:700;letter-spacing:-.04em;line-height:1;white-space:nowrap}
-  .hero .fcap{font-size:13.5px;color:var(--muted);margin-bottom:7px}
-  .hero .side{flex:1;min-width:250px;font-size:15px;color:var(--ink-2)}
-  .hero .side b{color:var(--ink)}
+  /* 내 근무: 위는 결과(하루 필요·퇴근 예정), 가운데는 이번 달 진행, 아래는 입력값 */
+  .statusline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:-8px 2px 14px}
+  button.link{background:none;border:none;padding:2px 4px;color:var(--brand);font-size:13px}
+  button.link:hover{background:none;text-decoration:underline}
+  .hero2{display:flex;gap:20px 44px;flex-wrap:wrap;align-items:flex-start}
+  .hero2 .h-main{flex:1 1 280px}
+  .hero2 .h-out{flex:0 1 260px}
+  .cap{font-size:13px;color:var(--muted);margin-bottom:7px}
+  .figure{font-size:60px;font-weight:700;letter-spacing:-.04em;line-height:1;white-space:nowrap}
+  .outfig{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.05;white-space:nowrap}
+  .why{font-size:13.5px;color:var(--ink-2);margin-top:12px;line-height:1.65}
+  .why b,.h-out .sub b{color:var(--ink)}
+  .h-out .sub{font-size:13px;color:var(--ink-2);margin-top:8px}
+  .sect{border-top:1px solid var(--line);margin-top:22px;padding-top:18px}
+  .sect > h3{font-size:12.5px;color:var(--muted);font-weight:650;margin:0 0 12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .sect > h3 span:last-child{font-weight:400}
+  .stats{display:flex;flex-wrap:wrap;gap:8px 30px;margin-top:16px}
+  .stats div{font-size:12.5px;color:var(--muted)}
+  .stats b{display:block;font-size:17px;color:var(--ink);font-weight:650;letter-spacing:-.01em}
+  .inputs{display:flex;gap:14px 18px;flex-wrap:wrap;align-items:flex-end}
+  .inputs label.fld input{width:108px}
+  .src{font-style:normal;font-size:10.5px;font-weight:700;color:var(--brand-ink);background:var(--brand-wash);border-radius:5px;padding:0 5px;margin-left:5px}
+  input[readonly]{background:var(--sunk);color:var(--ink-2)}
+  input[readonly]:focus{outline:none}
+  /* 팀 현황: 한 사람 한 줄 */
+  .tlist{display:flex;flex-direction:column;gap:8px}
+  .trow{display:grid;grid-template-areas:"name need bar pill";grid-template-columns:minmax(120px,1.2fr) 82px minmax(160px,2.6fr) 128px;
+    gap:6px 18px;align-items:center;background:var(--sunk);border:1px solid var(--line);border-radius:13px;padding:12px 16px}
+  .trow.me{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset;background:var(--card)}
+  .trow.empty .tn b,.trow.empty .tneed{color:var(--muted)}
+  .trow .tn{grid-area:name;min-width:0}
+  .trow .tn b{font-size:15px;letter-spacing:-.01em}
+  .trow .at{display:block;font-size:11.5px;color:var(--muted)}
+  .trow .tneed{grid-area:need;font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+  .trow .tneed small{display:block;font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0}
+  .trow .tbar{grid-area:bar}
+  .trow .track{height:10px}
+  .trow .tlab{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-top:6px}
+  .trow .tp{grid-area:pill;justify-self:end}
+  .trow .pill{margin-top:0}
+  .tag{font-size:11px;font-weight:700;color:#fff;background:var(--brand);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+  .p-mute{background:var(--card);color:var(--muted);border:1px solid var(--line)}
+  .tfoot{font-size:13px;color:var(--ink-2);margin-top:14px;line-height:1.7}
+  .tfoot .sub{color:var(--muted)}
   .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:650;margin-top:10px}
   .p-good{background:var(--good-wash);color:var(--good)}
   .p-brand{background:var(--brand-wash);color:var(--brand-ink)}
@@ -74,18 +108,6 @@
   label.fld{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--ink-2)}
   label.fld input{width:118px;text-align:right}
   .check{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-2);padding-bottom:9px;cursor:pointer}
-  .team{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:14px}
-  .mcard{background:var(--sunk);border:1px solid var(--line);border-radius:15px;padding:16px 17px}
-  .mcard.me{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset}
-  .mcard .top{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-  .mcard .nm{font-size:16px;font-weight:680;letter-spacing:-.01em}
-  .mcard .tag{font-size:11px;font-weight:700;color:#fff;background:var(--brand);border-radius:6px;padding:1px 6px}
-  .mcard .need{font-size:31px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
-  .mcard .needcap{font-size:12.5px;color:var(--muted)}
-  .mcard .row2{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:11px}
-  .mcard input{width:82px;text-align:right;padding:6px 9px;font-size:13.5px;background:var(--card)}
-  .mcard .lbl{font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px}
-  .mcard .foot{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:8px}
   details{background:var(--card);border:1px solid var(--line);border-radius:18px;margin-bottom:14px;box-shadow:var(--shadow)}
   details > summary{cursor:pointer;padding:17px 24px;font-size:14.5px;font-weight:640;list-style:none;display:flex;align-items:center;gap:9px}
   details > summary::-webkit-details-marker{display:none}
@@ -129,17 +151,23 @@
   .setup li{margin-bottom:5px}
   .setup code{background:var(--card);padding:1px 6px;border-radius:6px;font-size:12.5px}
   /* FLEX 자동 반영 안내 */
-  .flexinfo{font-size:13px;color:var(--ink-2);background:var(--brand-wash);border-radius:12px;padding:10px 14px;margin:-6px 0 18px;line-height:1.65}
+  .flexinfo{font-size:13px;color:var(--ink-2);background:var(--brand-wash);border-radius:12px;padding:10px 14px;margin:14px 0 0;line-height:1.65}
   .flexinfo b{color:var(--ink)}
   .flexinfo.warn{background:var(--warn-wash)}
   .flexinfo .sub{color:var(--muted);font-size:12.5px}
+  @media (max-width:680px){
+    .trow{grid-template-areas:"name name pill" "need bar bar";grid-template-columns:76px 1fr auto;padding:12px 14px}
+    .trow .at{display:inline;margin-left:8px;white-space:nowrap}
+  }
   @media (max-width:600px){
     .wrap{padding:20px 14px 80px}
     .card{padding:19px;border-radius:15px}
-    .hero .figure{font-size:46px}
-    .summary{gap:8px 22px}
+    .figure{font-size:48px}
+    .outfig{font-size:34px}
+    .stats{gap:8px 22px}
+    .inputs label.fld input{width:96px}
   }
-  @media print{body{background:#fff}details,.syncbar,.setup{display:none}}
+  @media print{body{background:#fff}details,.statusline,.setup{display:none}}
 </style>
 </head>
 <body>
@@ -172,60 +200,77 @@
   <div id="keyNoteText"></div>
 </div>
 
-<div class="syncbar" id="syncbar" hidden>
+<div class="statusline" id="syncbar" hidden>
   <span class="dot" id="dot"></span>
   <span id="syncText">연결 중…</span>
-  <div class="grow"></div>
-  <button id="reload">새로 읽기</button>
+  <button class="link" id="reload">새로 읽기</button>
 </div>
 
 <section class="card">
-  <div class="summary" id="summary"></div>
-</section>
-
-<section class="card">
-  <h2>내 근무</h2>
-  <div class="flexinfo" id="flexInfo" hidden></div>
-  <div class="inline">
-    <label class="fld">누적 근무시간 <input type="text" id="myWorked" class="num" placeholder="16:01"></label>
-    <label class="fld">앞으로 쓸 연차 (일) <input type="text" id="myAnnual" class="num" value="0"></label>
-    <label class="check"><input type="checkbox" id="incToday" checked> 오늘 포함</label>
-  </div>
-  <div class="hero">
-    <div>
-      <div class="fcap" id="heroCap">남은 근무일 하루 평균</div>
+  <h2 id="meTitle">내 근무</h2>
+  <div class="hero2">
+    <div class="h-main">
+      <div class="cap" id="heroCap">하루 필요 근무</div>
       <div class="figure num" id="heroFig">–</div>
       <div id="heroPill"></div>
+      <div class="why" id="heroSide"></div>
     </div>
-    <div class="side" id="heroSide"></div>
-  </div>
-  <div style="margin-top:24px">
-    <div class="track"><div class="fill" id="myFill"></div><div class="tick" id="myTick"></div></div>
-    <div class="tracklab"><span id="myL"></span><span id="myR"></span></div>
-  </div>
-  <div class="inline" style="margin:22px 0 0">
-    <label class="fld">출근 시각 <input type="text" id="startAt" class="num" value="09:30"></label>
-    <label class="fld">휴게 시간 <input type="text" id="breakAt" class="num" value="1:00"></label>
-    <div style="flex:1;min-width:230px;padding-bottom:2px">
-      <div style="font-size:12.5px;color:var(--muted)">권장 근무 블록</div>
-      <div id="coreText" style="font-size:16px;font-weight:650"></div>
+    <div class="h-out">
+      <div class="cap">오늘 퇴근 예정</div>
+      <div class="outfig num" id="outFig">–</div>
+      <div class="sub" id="outSub"></div>
+      <div id="corePill"></div>
     </div>
   </div>
   <div class="timeline" id="timeline"></div>
+
+  <div class="sect">
+    <h3><span id="monthCap">이번 달 진행</span><span id="monthNote"></span></h3>
+    <div class="track"><div class="fill" id="myFill"></div><div class="tick" id="myTick"></div></div>
+    <div class="tracklab"><span id="myL"></span><span id="myR"></span></div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="sect">
+    <h3><span>입력값</span><span id="inputNote"></span></h3>
+    <div class="inputs">
+      <label class="fld"><span>누적 근무시간<i class="src" id="srcWorked" hidden>FLEX</i></span><input type="text" id="myWorked" class="num" placeholder="16:01"></label>
+      <label class="fld"><span>앞으로 쓸 연차 (일)<i class="src" id="srcAnnual" hidden>FLEX</i></span><input type="text" id="myAnnual" class="num" value="0"></label>
+      <label class="fld"><span>출근 시각<i class="src" id="srcStart" hidden>FLEX</i></span><input type="text" id="startAt" class="num" value="09:30"></label>
+      <label class="fld"><span>휴게 시간</span><input type="text" id="breakAt" class="num" value="1:00"></label>
+      <label class="check"><input type="checkbox" id="incToday" checked> 오늘 포함</label>
+    </div>
+    <div class="flexinfo" id="flexInfo" hidden></div>
+  </div>
 </section>
 
 <section class="card">
   <h2>팀 현황 <span style="text-transform:none;letter-spacing:0;font-weight:400" id="teamSub"></span></h2>
-  <div class="team" id="team"></div>
-  <div class="btnrow" style="margin:14px 0 0">
-    <button id="addM">+ 팀원 추가</button>
-    <button id="delM">− 마지막 팀원 삭제</button>
-  </div>
-  <div class="note" id="teamNote"></div>
+  <div class="tlist" id="team"></div>
+  <div class="tfoot" id="teamNote"></div>
 </section>
 
 <details>
-  <summary>목표시간 계산 근거 <span class="hint">공휴일 조정 · FLEX 값 고정</span></summary>
+  <summary>하루 N시간 시나리오 <span class="hint">언제 목표를 채우는지</span></summary>
+  <div class="dbody scroll">
+    <table id="scen"><thead><tr>
+      <th>하루 근무</th><th>월 총계</th><th>목표 대비</th><th>목표 도달일</th><th>판정</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+</details>
+
+<details>
+  <summary>일별 근무 기록 <span class="hint">날짜별로 적기 · 팀 시트에 저장</span></summary>
+  <div class="dbody">
+    <label class="check"><input type="checkbox" id="useDaily"> 일별 합계를 내 누적 근무시간으로 사용 (켜면 FLEX 자동 반영이 멈춥니다)</label>
+    <div class="dowhead"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span></div>
+    <div class="grid-days" id="days"></div>
+    <div class="note"><b>8:30</b>, <b>8.5</b>, <b>8</b> 모두 인식합니다. 연차는 <b>연</b>, 반차는 <b>반</b>.</div>
+  </div>
+</details>
+
+<details>
+  <summary>목표시간 계산 근거 <span class="hint">공휴일 조정 · 목표값 고정</span></summary>
   <div class="dbody">
     <div id="formula" style="font-size:14.5px"></div>
     <div class="chips" id="holChips"></div>
@@ -238,28 +283,14 @@
 </details>
 
 <details>
-  <summary>하루 N시간 시나리오 <span class="hint">언제 목표를 채우는지</span></summary>
-  <div class="dbody scroll">
-    <table id="scen"><thead><tr>
-      <th>하루 근무</th><th>월 총계</th><th>목표 대비</th><th>목표 도달일</th><th>판정</th>
-    </tr></thead><tbody></tbody></table>
-  </div>
-</details>
-
-<details>
-  <summary>일별 근무 기록 <span class="hint">이름별로 팀 시트에 저장됩니다</span></summary>
-  <div class="dbody">
-    <label class="check"><input type="checkbox" id="useDaily"> 일별 합계를 내 누적 근무시간으로 사용</label>
-    <div class="dowhead"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span></div>
-    <div class="grid-days" id="days"></div>
-    <div class="note"><b>8:30</b>, <b>8.5</b>, <b>8</b> 모두 인식합니다. 연차는 <b>연</b>, 반차는 <b>반</b>.</div>
-  </div>
-</details>
-
-<details>
-  <summary>백업 / 복원 <span class="hint">JSON으로 내보내기</span></summary>
+  <summary>팀원 · 백업 관리 <span class="hint">팀원 추가 · JSON 내보내기</span></summary>
   <div class="dbody">
     <div class="btnrow">
+      <button id="addM">+ 팀원 추가</button>
+      <button id="delM">− 마지막 팀원 숨기기</button>
+      <span class="msg">추가하면 팀 시트에 그 이름의 행이 생깁니다. 숨기기는 이 화면에서만 빠지고 팀 시트 행은 그대로입니다.</span>
+    </div>
+    <div class="btnrow" style="margin-top:16px">
       <button id="bExport">JSON 만들기</button>
       <button id="bCopy">복사</button>
       <button id="bDown">파일로 저장</button>
@@ -486,8 +517,10 @@ async function push(name){
    - 일별 합계 모드를 켠 카드는 누적을 건드리지 않음
    - 누적 = FLEX 인정시간 − 앞으로 쓸 휴가, 연차 = 앞으로 쓸 휴가 일수(오늘 포함)
      (FLEX 인정시간에는 앞으로 쓸 휴가가 미리 더해져 있어 그대로 넣으면 휴가가 두 번 계산됨) */
-let flex=null, flexErr="";
+let flex=null, flexErr="", flexApplied=false;   // flexApplied: FLEX 값을 실제로 카드에 넣었는지
 const srv={};   // 이름 → 서버에 저장된 "누적|연차" (pull·push 때 갱신)
+// 내 입력칸을 FLEX가 채우는 중인지 → 그 칸은 읽기 전용(1분마다 FLEX 값으로 다시 채워지므로)
+const flexLock=M=>!!(flex && flexApplied && M && flex.name===M.name && !M.useDaily);
 function flexValid(f){
   return f && typeof f.name==="string" && f.name && /^\d{4}-\d{2}$/.test(f.ym||"") &&
     [f.worked,f.annualDays,f.required,f.fetchedAt].every(v=>typeof v==="number"&&isFinite(v));
@@ -495,17 +528,19 @@ function flexValid(f){
 function kstClock(ts){ const k=new Date(ts+9*3600e3); return pad(k.getUTCHours())+":"+pad(k.getUTCMinutes()); }
 function applyFlex(){
   const box=$("flexInfo");
+  flexApplied=false;
   if(!flex && !flexErr){ box.hidden=true; return; }
   box.hidden=false;
-  if(!flex){ box.className="flexinfo warn"; box.innerHTML="FLEX 자동 반영을 못 했습니다 — "+esc(flexErr)+". 값은 지금처럼 직접 적어 주세요."; return; }
+  if(!flex){ box.className="flexinfo warn"; box.innerHTML="FLEX 값을 못 읽었습니다 — "+esc(flexErr)+". 값은 직접 적어 주세요."; return; }
   const f=flex, mb=S.members.find(m=>m.name===f.name), mi=month();
   const at=new Date(f.fetchedAt).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
   let why="";
   if(!f.monthAligned) why="FLEX 정산 기간("+esc(f.periodFrom)+"~"+esc(f.periodTo)+")이 달력 한 달과 달라 반영하지 않았습니다.";
   else if(f.ym!==S.ym) why="FLEX 값은 "+esc(f.ym)+" 기준이라 지금 보는 달에는 반영하지 않았습니다.";
   else if(!mb) why="FLEX 이름 ‘"+esc(f.name)+"’이 팀원 목록에 없어 반영하지 않았습니다.";
-  else if(mb.useDaily) why="‘일별 합계’ 모드라 누적은 그대로 두었습니다.";
+  else if(mb.useDaily) why="‘일별 합계’를 쓰는 중이라 FLEX 값은 넣지 않았습니다. 아래 ‘일별 근무 기록’에서 끄면 FLEX가 채웁니다.";
   if(why){ box.className="flexinfo warn"; box.innerHTML="<b>FLEX 연결됨</b> · "+at+" 기준 — "+why; return; }
+  flexApplied=true;
 
   const w=hm(f.worked), a=String(f.annualDays);
   if(mb.worked!==w || String(mb.annual)!==a){ mb.worked=w; mb.annual=a; }
@@ -515,16 +550,15 @@ function applyFlex(){
     S.startAt=kstClock(f.todayStart);
     if(document.activeElement!==$("startAt")) $("startAt").value=S.startAt;
   }
-  const tgt = f.required===mi.target
-    ? "FLEX 목표 "+hm(f.required)+" (플래너와 같음)"
-    : "<b style='color:var(--warn)'>FLEX 목표 "+hm(f.required)+" ≠ 플래너 "+hm(mi.target)+"</b> — ‘목표시간 계산 근거’에서 FLEX 값으로 고정할 수 있어요";
   box.className="flexinfo";
-  box.innerHTML="<b>FLEX 자동 반영</b> · "+at+" 기준 · "+esc(f.name)+" 카드<br>"+
-    "누적 <b class='num'>"+w+"</b>"+(f.futureLeaveMin?" (앞으로 쓸 휴가 "+hm(f.futureLeaveMin)+" → 연차 "+a+"일로 따로 계산)":"")+
-    (f.todayStart?" · 오늘 "+kstClock(f.todayStart)+" 출근, "+hm(f.todayWorked)+(f.ongoing?" 근무 중":" 근무"):" · 오늘 출근 기록 없음")+
-    " · "+tgt+
-    (S.whoami!==f.name?"<br><span class='sub'>오른쪽 위 이름을 ‘"+esc(f.name)+"’로 바꾸면 위 큰 숫자와 퇴근 시각에도 반영됩니다.</span>":"")+
-    "<br><span class='sub'>FLEX와 연결된 동안 누적·연차는 1분마다 FLEX 값으로 다시 채워집니다.</span>";
+  box.innerHTML="<b>FLEX 자동 반영</b> · "+at+" 기준"+
+    (S.whoami!==f.name
+      ? " — ‘"+esc(f.name)+"’ 행에 넣었습니다. 오른쪽 위 이름을 ‘"+esc(f.name)+"’로 바꾸면 이 화면에도 보입니다."
+      : " — <span class='sub'>FLEX 표시가 붙은 칸은 1분마다 FLEX 값으로 다시 채워집니다."+
+        (f.futureLeaveMin?" 앞으로 쓸 휴가 "+hm(f.futureLeaveMin)+"는 누적에서 빼고 연차 "+a+"일로 셉니다.":"")+"</span>")+
+    (f.required!==mi.target
+      ? "<br><b style='color:var(--warn)'>FLEX 목표 "+hm(f.required)+" ≠ 플래너 "+hm(mi.target)+"</b> — ‘목표시간 계산 근거’에서 FLEX 값으로 고정할 수 있어요."
+      : "");
 }
 window.addEventListener("message",e=>{
   const m=e.data;
@@ -573,61 +607,69 @@ function restoreLegacyDaily(){
 /* ── 렌더 ── */
 function render(){
   const mi=month(), sp=split(mi), M=me(), c=calc(M,mi,sp);
+  const pace=mi.workDays?Math.min(100,sp.past/mi.workDays*100):0;
 
-  $("summary").innerHTML=[
-    ["이번 달 목표","<span style='color:var(--brand)'>"+hm(mi.target)+"</span><em>"+ko(mi.target)+"</em>"],
-    ["근무일",mi.workDays+"<em>일 · 평균 "+hm(mi.target/mi.workDays)+"</em>"],
-    ["남은 근무일",sp.rem+"<em>일</em>"],
-    ["오늘",mi.m+"월 "+parseISO(S.today).getDate()+"일<em>"+DOW[parseISO(S.today).getDay()]+"요일</em>"]
-  ].map(([k,v])=>"<div class='item'><div class='k'>"+k+"</div><div class='v num'>"+v+"</div></div>").join("");
-
+  // ① 결과: 하루 필요 근무 + 오늘 퇴근 예정
   const lv=level(c.need,c.done);
-  $("heroCap").textContent=(M.name?M.name+" · ":"")+"남은(미입력) 근무일 "+c.days+"일 · 하루 평균";
+  $("meTitle").textContent=M.name?"내 근무 · "+M.name:"내 근무";
+  $("heroCap").textContent=c.done?"이번 달 목표":"하루 필요 근무 · 남은 "+c.days+"일 평균";
   $("heroFig").textContent=c.done?"달성 완료":(c.days>0?hm(c.need):"–");
   $("heroPill").innerHTML="<span class='pill "+lv.c+"'>"+lv.i+" "+lv.t+"</span>";
   $("heroSide").innerHTML= c.done
-    ? "목표를 <b>"+ko(-c.rem)+"</b> 초과했습니다. 초과분이 연장근로 신청·승인 대상인지 확인하세요."
+    ? "목표를 <b>"+ko(-c.rem)+"</b> 넘겼습니다. 넘긴 시간이 연장근로 신청·승인 대상인지 확인하세요."
     : (c.days>0
-      ? "남은 <b>"+ko(c.rem)+"</b>을 "+c.days+"일에 나눈 값입니다.<br>표준 8시간 대비 <b>"+(c.need-480>=0?"+":"")+hm(c.need-480)+"</b>"
-        +(c.planned?" · 일별에 채운 "+c.planned+"일은 제외":"")
-        +(c.av?" · 연차 "+c.av+"일("+ko(c.credit)+") 인정 반영":"")
-      : "채울 근무일이 없습니다"+(c.rem>0?". 계획대로면 <b>"+ko(c.rem)+"</b> 부족 — 남은 날 근무를 늘리거나 연차로 채워야 해요.":". 목표를 채웠습니다."));
+      ? "남은 <b>"+ko(c.rem)+"</b>을 <b>"+c.days+"일</b>에 나눈 값 · 8시간 대비 <b class='num'>"+(c.need-480>=0?"+":"")+hm(c.need-480)+"</b>"
+        +(c.av?"<br>연차 "+c.av+"일("+hm(c.credit)+")은 근무한 것으로 셈":"")
+        +(c.planned?"<br>일별에 미리 채운 "+c.planned+"일은 뺌":"")
+      : "채울 근무일이 없습니다"+(c.rem>0?". 이대로면 <b>"+ko(c.rem)+"</b> 부족 — 남은 날 근무를 늘리거나 연차로 채워야 해요.":"."));
+  timeline(c.done||!(c.days>0)?480:c.need, c.done||!(c.days>0));
 
-  const pace=mi.workDays?Math.min(100,sp.past/mi.workDays*100):0;
+  // ② 이번 달 진행
   const f=$("myFill"); f.style.width=c.pct+"%"; f.style.background=c.done?"var(--good)":"var(--brand)";
   $("myTick").style.left=pace+"%";
-  $("myL").innerHTML="누적 <b class='num'>"+hm(c.worked)+"</b> · "+c.pct.toFixed(1)+"%";
-  $("myR").innerHTML="기대 페이스 "+pace.toFixed(0)+"% · 목표 <b class='num'>"+hm(mi.target)+"</b>";
-  timeline(c.done?480:(c.need||480));
+  $("monthCap").textContent=mi.m+"월 진행";
+  $("monthNote").textContent="검은 눈금 = 오늘까지 기대 페이스 "+pace.toFixed(0)+"%";
+  $("myL").innerHTML="누적 <b class='num'>"+hm(c.worked)+"</b>"+(c.credit?" + 연차 <b class='num'>"+hm(c.credit)+"</b>":"")+" · "+c.pct.toFixed(1)+"%";
+  $("myR").innerHTML="목표 <b class='num'>"+hm(mi.target)+"</b>";
+  $("stats").innerHTML=[
+    ["남은 시간", c.done?"0:00":hm(c.rem)],
+    ["남은 근무일", c.days+"일"+(c.av||c.planned?" <span style='font-size:12px;font-weight:400;color:var(--muted)'>(전체 "+sp.rem+"일)</span>":"")],
+    ["이번 달 근무일", mi.workDays+"일 <span style='font-size:12px;font-weight:400;color:var(--muted)'>평균 "+hm(mi.target/mi.workDays)+"</span>"],
+    ["이번 달 목표", "<span style='color:var(--brand)'>"+hm(mi.target)+"</span>"]
+  ].map(([k,v])=>"<div>"+k+"<b class='num'>"+v+"</b></div>").join("");
+  $("inputNote").textContent=sync.on?"고치면 팀 시트에 자동 저장":"이 브라우저에만 저장";
 
-  let html="",sw=0,st=0,risk=0,doneN=0;
-  S.members.forEach((mb,i)=>{
-    const k=calc(mb,mi,sp), l=level(k.need,k.done);
-    sw+=k.worked+k.credit; st+=k.target;
-    if(k.done)doneN++; else if(k.need!=null&&k.need>540)risk++;
+  // ③ 팀 현황: 한 사람 한 줄. 값이 없는 사람은 '미입력'으로 두고 팀 평균에서 뺀다
+  const isEmpty=mb=> !(parseFloat(mb.annual)>0) && (mb.useDaily? dailySum(mi,mb.daily)===0 : !String(mb.worked||"").trim());
+  const tm=S.members.map(mb=>({mb,k:calc(mb,mi,sp),empty:isEmpty(mb)}));
+  const ordered=[...tm.filter(r=>r.mb.name===S.whoami),
+                 ...tm.filter(r=>r.mb.name!==S.whoami&&!r.empty),
+                 ...tm.filter(r=>r.mb.name!==S.whoami&&r.empty)];
+  let html="",sw=0,st=0,risk=0,doneN=0,n=0,needSum=0,needN=0;
+  ordered.forEach(({mb,k,empty})=>{
     const isMe=mb.name===S.whoami;
-    html+="<div class='mcard"+(isMe?" me":"")+"'>"+
-      "<div class='top'><span class='nm'>"+esc(mb.name)+"</span>"+(isMe?"<span class='tag'>나</span>":"")+
-        "<span style='margin-left:auto' class='pill "+l.c+"'>"+l.i+" "+l.t+"</span></div>"+
-      "<div class='row2'>"+
-        "<div><div class='needcap'>하루 필요</div><div class='need num'>"+(k.done?"–":(k.days>0?hm(k.need):"–"))+"</div></div>"+
-        "<div style='display:flex;gap:8px'>"+
-          "<div><span class='lbl'>누적</span><input type='text' class='num' data-i='"+i+"' data-k='worked' value='"+(mb.useDaily?hm(k.worked):esc(mb.worked))+"'"+(mb.useDaily?" disabled title='일별 사용 중'":"")+"></div>"+
-          "<div><span class='lbl'>연차</span><input type='text' class='num' data-i='"+i+"' data-k='annual' value='"+esc(mb.annual)+"' style='width:52px'></div>"+
-        "</div></div>"+
-      "<div class='track'><div class='fill' style='width:"+k.pct+"%;background:"+(k.done?"var(--good)":(k.need!=null&&k.need>540?"var(--warn)":"var(--brand)"))+"'></div>"+
+    if(!empty){ n++; sw+=k.worked+k.credit; st+=k.target;
+      if(k.done)doneN++; else if(k.need!=null){ needSum+=k.need; needN++; if(k.need>540)risk++; } }
+    const l=empty?{c:"p-mute",i:"–",t:"미입력"}:level(k.need,k.done);
+    const at=mb.at?fmtAt(mb.at):"";
+    const col=k.done?"var(--good)":(k.need!=null&&k.need>540?"var(--warn)":"var(--brand)");
+    html+="<div class='trow"+(isMe?" me":"")+(empty?" empty":"")+"'>"+
+      "<div class='tn'><b>"+esc(mb.name)+"</b>"+(isMe?"<span class='tag'>나</span>":"")+(at?"<span class='at'>"+at+" 저장</span>":"")+"</div>"+
+      "<div class='tneed num'>"+(empty||k.done||!(k.days>0)?"–":hm(k.need))+"<small>하루 필요</small></div>"+
+      "<div class='tbar'><div class='track'>"+(empty?"":"<div class='fill' style='width:"+k.pct+"%;background:"+col+"'></div>")+
         "<div class='tick' style='left:"+pace+"%'></div></div>"+
-      "<div class='foot'><span class='num'>"+hm(k.worked+k.credit)+" / "+hm(k.target)+"</span><span>"+k.pct.toFixed(0)+"%</span></div>"+
+        "<div class='tlab'><span class='num'>"+(empty?"아직 입력 없음":hm(k.worked+k.credit)+" / "+hm(k.target))+"</span><span>"+(empty?"":k.pct.toFixed(0)+"%")+"</span></div></div>"+
+      "<div class='tp'><span class='pill "+l.c+"'>"+l.i+" "+l.t+"</span></div>"+
     "</div>";
   });
   $("team").innerHTML=html;
   $("teamSub").textContent="· "+S.members.length+"명 · 기대 페이스 "+pace.toFixed(0)+"%";
-  const avg=sp.rem>0?(st-sw)/(S.members.length||1)/sp.rem:null;
-  $("teamNote").innerHTML=
-    "팀 평균 진행률 <b>"+(st?(sw/st*100).toFixed(1):0)+"%</b> · 평균 하루 필요 <b class='num'>"+(avg!=null?hm(Math.max(0,avg)):"–")+"</b>"+
-    " · 목표 달성 <b>"+doneN+"명</b> · 하루 9시간 초과 필요 <b style='color:"+(risk?"var(--warn)":"var(--ink)")+"'>"+risk+"명</b>"+
-    "<br><span style='color:var(--muted)'>누적 값은 FLEX ‘휴가 시간 포함’ 기준. 검은 눈금은 오늘까지의 기대 페이스."+
-    (sync.on?" 값을 고치면 자동으로 팀에 저장됩니다.":" 지금은 이 브라우저에만 저장됩니다.")+"</span>";
+  $("teamNote").innerHTML=(n
+    ? "입력한 <b>"+n+"명</b> 기준 · 평균 진행률 <b>"+(st?(sw/st*100).toFixed(1):0)+"%</b> · 평균 하루 필요 <b class='num'>"+(needN?hm(needSum/needN):"–")+"</b>"+
+      " · 목표 달성 <b>"+doneN+"명</b> · 하루 9시간 넘게 필요 <b style='color:"+(risk?"var(--warn)":"var(--ink)")+"'>"+risk+"명</b>"
+    : "아직 값을 넣은 사람이 없습니다.")+
+    "<br><span class='sub'>누적은 FLEX ‘휴가 시간 포함’ 기준. 각자 자기 값만 위 ‘입력값’에서 고칩니다"+
+    (sync.on?"(자동으로 팀 시트에 저장).":"(지금은 이 브라우저에만 저장).")+"</span>";
 
   $("formula").innerHTML="<span class='num'>"+S.weekBase+" × ("+mi.n+" ÷ 7)</span> = <b class='num'>"+hm(mi.base)+"</b>"+
     " &nbsp;−&nbsp; 공휴일 "+mi.hc+"일 × 8:00 = <b class='num'>"+hm(mi.holMin)+"</b>"+
@@ -662,15 +704,23 @@ function render(){
   wi.disabled=M.useDaily;
   const ai=$("myAnnual"); if(document.activeElement!==ai) ai.value=M.annual;
   const ud=$("useDaily"); if(ud) ud.checked=!!M.useDaily;
+  // FLEX가 채우는 칸은 읽기 전용 + 'FLEX' 표시
+  const lock=flexLock(M), lockStart=lock && !!flex.todayStart && S.today===iso(new Date());
+  const lockTip="FLEX 값으로 자동으로 채워집니다";
+  [["myWorked","srcWorked",lock],["myAnnual","srcAnnual",lock],["startAt","srcStart",lockStart]].forEach(([id,src,on])=>{
+    $(id).readOnly=on; $(id).title=on?lockTip:""; $(src).hidden=!on; });
   saveLocal();
 }
 
-function timeline(need){
-  const s=toMin(S.startAt), br=toMin(S.breakAt)||0, out=$("coreText");
-  if(s==null){ out.textContent="출근 시각을 09:30 형태로"; $("timeline").innerHTML=""; return; }
+const fmtAt=v=>{ const t=new Date(v); return isNaN(t)?"":(t.getMonth()+1)+"/"+t.getDate()+" "+pad(t.getHours())+":"+pad(t.getMinutes()); };
+function timeline(need,basic){
+  const s=toMin(S.startAt), br=toMin(S.breakAt)||0;
+  if(s==null){ $("outFig").textContent="–"; $("outSub").textContent="출근 시각을 09:30 형태로 적어 주세요";
+    $("corePill").innerHTML=""; $("timeline").innerHTML=""; return; }
   const e=s+need+br, cS=660, cE=960, ok=s<=cS&&e>=cE;
-  out.innerHTML=clock(s)+" → <b>"+clock(e)+"</b> <span style='font-weight:400;color:var(--ink-2);font-size:14px'>(근무 "+hm(need)+" + 휴게 "+hm(br)+")</span> "+
-    "<span class='pill "+(ok?"p-good":"p-warn")+"' style='margin-left:6px'>"+(ok?"✓ 코어타임 충족":"▲ 코어타임 미충족")+"</span>";
+  $("outFig").textContent=clock(e);
+  $("outSub").innerHTML="<b class='num'>"+clock(s)+"</b> 출근 + 근무 "+hm(need)+(basic?"(8시간 기준)":"")+" + 휴게 "+hm(br);
+  $("corePill").innerHTML="<span class='pill "+(ok?"p-good":"p-warn")+"'>"+(ok?"✓ 코어타임 충족":"▲ 코어타임 미충족")+"</span>";
   const T0=420,T1=1320,sp=T1-T0,P=t=>(Math.min(Math.max(t,T0),T1)-T0)/sp*100;
   let g="";
   for(let t=T0;t<=T1;t+=60)
@@ -720,7 +770,8 @@ function bind(){
   ["startAt","breakAt"].forEach(k=>$(k).oninput=e=>{S[k]=e.target.value; render();});
   $("override").oninput=e=>{S.override=e.target.value; render();};
   $("weekBase").onchange=e=>{S.weekBase=Number(e.target.value); render();};
-  $("useDaily").onchange=e=>{const M=me(); M.useDaily=e.target.checked; render(); pushSoon(M.name);};
+  // 일별 합계를 끄면 FLEX 값을 바로 넣고 저장(빈 누적이 한 번 저장되던 문제 수정)
+  $("useDaily").onchange=e=>{const M=me(); M.useDaily=e.target.checked; applyFlex(); render(); pushSoon(M.name);};
   $("reload").onclick=()=>pull(false);
 
   $("holChips").onchange=e=>{ const k=e.target.getAttribute("data-hol"); if(!k)return;
@@ -728,16 +779,7 @@ function bind(){
   $("days").oninput=e=>{ const k=e.target.getAttribute("data-day"); if(!k)return;
     const M=me(); M.daily[k]=e.target.value; render(); pushSoon(M.name); };
 
-  $("team").addEventListener("input",e=>{
-    const i=e.target.getAttribute("data-i"); if(i==null) return;
-    const key=e.target.getAttribute("data-k"), pos=e.target.selectionStart;
-    S.members[+i][key]=e.target.value;
-    const nm=S.members[+i].name;
-    render();
-    const again=document.querySelector("#team [data-i='"+i+"'][data-k='"+key+"']");
-    if(again){ again.focus(); try{again.setSelectionRange(pos,pos);}catch(_){} }
-    pushSoon(nm);
-  });
+  // 팀 현황은 보기 전용. 다른 사람 값은 오른쪽 위 이름을 바꿔 '입력값'에서 고친다
   $("addM").onclick=()=>{ const n=prompt("팀원 이름"); if(!n) return;
     if(S.members.some(m=>m.name===n)) return;
     S.members.push({name:n,worked:"",annual:"0",daily:{},useDaily:false}); fillWho(); render(); pushSoon(n); };

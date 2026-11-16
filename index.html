@@ -248,19 +248,14 @@
   <h2>팀 현황 <span style="text-transform:none;letter-spacing:0;font-weight:400" id="teamSub"></span></h2>
   <div class="tlist" id="team"></div>
   <div class="tfoot" id="teamNote"></div>
+  <div class="btnrow" id="addRow" hidden style="margin:12px 0 0">
+    <button class="link" id="addM">+ 팀원 추가</button>
+    <span class="msg">FLEX 명단을 못 받아 기본 명단을 씁니다. 추가하면 팀 시트에 그 이름의 행이 생깁니다.</span>
+  </div>
 </section>
 
 <details>
-  <summary>하루 N시간 시나리오 <span class="hint">언제 목표를 채우는지</span></summary>
-  <div class="dbody scroll">
-    <table id="scen"><thead><tr>
-      <th>하루 근무</th><th>월 총계</th><th>목표 대비</th><th>목표 도달일</th><th>판정</th>
-    </tr></thead><tbody></tbody></table>
-  </div>
-</details>
-
-<details>
-  <summary>일별 근무 기록 <span class="hint">날짜별로 적기 · 팀 시트에 저장</span></summary>
+  <summary>일별 근무 기록 <span class="hint">FLEX 대신 날짜별로 직접 적을 때</span></summary>
   <div class="dbody">
     <label class="check"><input type="checkbox" id="useDaily"> 일별 합계를 내 누적 근무시간으로 사용 (켜면 FLEX 자동 반영이 멈춥니다)</label>
     <div class="dowhead"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span></div>
@@ -282,24 +277,6 @@
   </div>
 </details>
 
-<details>
-  <summary>팀원 · 백업 관리 <span class="hint">팀원 추가 · JSON 내보내기</span></summary>
-  <div class="dbody">
-    <div class="btnrow">
-      <button id="addM">+ 팀원 추가</button>
-      <button id="delM">− 마지막 팀원 숨기기</button>
-      <span class="msg" id="memberMsg"></span>
-    </div>
-    <div class="btnrow" style="margin-top:16px">
-      <button id="bExport">JSON 만들기</button>
-      <button id="bCopy">복사</button>
-      <button id="bDown">파일로 저장</button>
-      <button class="pri" id="bImport">붙여넣은 JSON 불러오기</button>
-      <span class="msg" id="saveMsg"></span>
-    </div>
-    <textarea id="json" placeholder="JSON을 붙여넣고 '불러오기'"></textarea>
-  </div>
-</details>
 
 </div>
 
@@ -685,17 +662,15 @@ function render(){
   });
   $("team").innerHTML=html;
   $("teamSub").textContent="· "+S.members.length+"명"+(flexTeam?" · FLEX ‘"+flexTeam.dept+"’ 기준":"")+" · 기대 페이스 "+pace.toFixed(0)+"%";
-  // 팀원 추가/숨기기: FLEX 명단을 따를 때는 끈다(FLEX 조직도가 기준)
-  $("addM").disabled=$("delM").disabled=!!flexTeam;
-  $("memberMsg").textContent= flexTeam
-    ? "팀원 명단은 FLEX 조직도 ‘"+flexTeam.dept+"’ 구성원을 그대로 따릅니다. 사람이 바뀌면 FLEX에 반영되는 대로 여기도 바뀝니다(최대 6시간)."
-    : "FLEX 명단을 못 받아 기본 명단을 씁니다. 추가하면 팀 시트에 그 이름의 행이 생깁니다. 숨기기는 이 화면에서만 빠지고 팀 시트 행은 그대로입니다.";
+  // 팀원 추가: FLEX 명단을 따를 때는 숨긴다(FLEX 조직도가 기준)
+  $("addRow").hidden=!!flexTeam;
   $("teamNote").innerHTML=(n
     ? "입력한 <b>"+n+"명</b> 기준 · 평균 진행률 <b>"+(st?(sw/st*100).toFixed(1):0)+"%</b> · 평균 하루 필요 <b class='num'>"+(needN?hm(needSum/needN):"–")+"</b>"+
       " · 목표 달성 <b>"+doneN+"명</b> · 하루 9시간 넘게 필요 <b style='color:"+(risk?"var(--warn)":"var(--ink)")+"'>"+risk+"명</b>"
     : "아직 값을 넣은 사람이 없습니다.")+
     "<br><span class='sub'>누적은 FLEX ‘휴가 시간 포함’ 기준. 각자 자기 값만 위 ‘입력값’에서 고칩니다"+
-    (sync.on?"(자동으로 팀 시트에 저장).":"(지금은 이 브라우저에만 저장).")+"</span>";
+    (sync.on?"(자동으로 팀 시트에 저장).":"(지금은 이 브라우저에만 저장).")+
+    (flexTeam?" 팀원 명단은 FLEX 조직도를 따르고, 바뀌면 최대 6시간 뒤 반영됩니다.":"")+"</span>";
 
   $("formula").innerHTML="<span class='num'>"+S.weekBase+" × ("+mi.n+" ÷ 7)</span> = <b class='num'>"+hm(mi.base)+"</b>"+
     " &nbsp;−&nbsp; 공휴일 "+mi.hc+"일 × 8:00 = <b class='num'>"+hm(mi.holMin)+"</b>"+
@@ -707,23 +682,6 @@ function render(){
       : "<span class='chip dim'><b>"+x.d+"일("+DOW[x.w]+")</b> "+x.hol+" · 차감 없음</span>"
     ).join("") : "<span style='color:var(--muted);font-size:13px'>이번 달 공휴일 없음</span>";
 
-  // 시나리오는 '미입력(빈)' 근무일에만 h시간씩 배분 — 이미 채운 미래 날은 제외
-  const blankList=M.useDaily? sp.list.filter(x=>!(((M.daily||{})[x.key])||"").trim()) : sp.list;
-  let rows="";
-  for(let h=420;h<=630;h+=30){
-    const total=c.worked+c.credit+h*c.days, diff=total-mi.target;
-    let reach="–";
-    if(c.done) reach="이미 달성";
-    else{ let acc=c.worked+c.credit,hit=null;
-      for(const x of blankList){ acc+=h; if(acc>=mi.target){hit=x;break;} }
-      reach=hit?mi.m+"/"+hit.d+"("+DOW[hit.w]+")":"미달"; }
-    const l=level(h,false), near=c.need!=null&&Math.abs(h-c.need)<15;
-    rows+="<tr"+(near?" style='background:var(--brand-wash);font-weight:650'":"")+">"+
-      "<td class='num'>"+hm(h)+(near?" ← 권장":"")+"</td><td class='num'>"+hm(total)+"</td>"+
-      "<td class='num' style='color:"+(diff>=0?"var(--good)":"var(--crit)")+"'>"+(diff>=0?"+":"")+hm(diff)+"</td>"+
-      "<td>"+reach+"</td><td><span class='pill "+l.c+"'>"+l.i+" "+l.t+"</span></td></tr>";
-  }
-  document.querySelector("#scen tbody").innerHTML=rows;
 
   const wi=$("myWorked");
   if(document.activeElement!==wi){ wi.value=M.useDaily?hm(dailySum(mi,M.daily)):M.worked; }
@@ -809,22 +767,7 @@ function bind(){
   $("addM").onclick=()=>{ const n=prompt("팀원 이름"); if(!n) return;
     if(S.members.some(m=>m.name===n)) return;
     S.members.push({name:n,worked:"",annual:"0",daily:{},useDaily:false}); fillWho(); render(); pushSoon(n); };
-  $("delM").onclick=()=>{ for(let i=S.members.length-1;i>=0;i--){
-      if(S.members[i].name!==S.whoami){ S.members.splice(i,1); break; } }
-    fillWho(); render(); };
 
-  const box=$("json"), msg=$("saveMsg");
-  const say=t=>{msg.textContent=t; setTimeout(()=>{if(msg.textContent===t)msg.textContent="";},2500);};
-  $("bExport").onclick=()=>{box.value=JSON.stringify(S,null,2); say("만들었습니다.");};
-  $("bCopy").onclick=async()=>{ if(!box.value) box.value=JSON.stringify(S,null,2);
-    try{await navigator.clipboard.writeText(box.value); say("복사했습니다.");}catch(_){box.select();say("Ctrl/Cmd+C");} };
-  $("bDown").onclick=()=>{ const b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
-    const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="flex-plan-"+S.ym+".json";
-    document.body.appendChild(a); a.click(); a.remove(); say("저장 시작"); };
-  $("bImport").onclick=()=>{ try{ const o=JSON.parse(box.value);
-      Object.keys(S).forEach(k=>{ if(k in o) S[k]=o[k]; });
-      syncInputs(); fillWho(); renderDays(); render(); say("불러왔습니다.");
-    }catch(_){ say("JSON 형식을 확인해 주세요."); } };
 }
 function syncInputs(){
   $("ym").value=S.ym; $("today").value=S.today;

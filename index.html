@@ -288,7 +288,7 @@
     <div class="btnrow">
       <button id="addM">+ 팀원 추가</button>
       <button id="delM">− 마지막 팀원 숨기기</button>
-      <span class="msg">추가하면 팀 시트에 그 이름의 행이 생깁니다. 숨기기는 이 화면에서만 빠지고 팀 시트 행은 그대로입니다.</span>
+      <span class="msg" id="memberMsg"></span>
     </div>
     <div class="btnrow" style="margin-top:16px">
       <button id="bExport">JSON 만들기</button>
@@ -314,7 +314,7 @@ const CONFIG = {
   apiUrl: "https://script.google.com/macros/s/AKfycbwtV--P4SFFSNJ1G3XnhwlWNenHrGbdX-Qivb7x6CFyMyrIfuawtj_nrn6T34pNs6u0SQ/exec",                 // 예: "https://script.google.com/macros/s/AKfy.../exec"
   key:    "",                // 비워 둡니다. 확장이 넘겨 준 팀 키가 여기에 들어갑니다
   pollSeconds: 45,            // 다른 사람 변경을 몇 초마다 다시 읽을지
-  members: ["문재영","오정은","정수빈","조현호"]   // 기본 팀원 (서버에 값이 있으면 서버 우선)
+  members: ["문재영","정수빈","정의관","조현호"]   // 기본 팀원. FLEX 조직도 명단(확장 1.5 이상)을 받으면 그쪽을 씀 (2026-11-16 FLEX AI/AX Lab 기준)
 };
 
 (function(){
@@ -444,34 +444,50 @@ function jsonp(params){
     document.head.appendChild(s);
   });
 }
+/* ── 팀원 명단 (2026-11-16) ──
+   확장 1.5 이상이 FLEX 조직도의 '내 부서' 구성원 이름을 넘겨 주면 그 명단을 쓴다(나간 사람은 빠지고 새로 온 사람은 들어옴).
+   못 받으면 CONFIG.members + 팀 시트에만 있는 이름. 지난 달을 볼 때는 그때 시트에 있던 이름도 같이 보여 준다. */
+let lastRows=null;   // {ym, rows} 마지막으로 읽은 팀 시트
+let flexTeam=null;   // {dept, names} FLEX 조직도 명단
+function teamValid(t){
+  return !!(t && Array.isArray(t.names) && t.names.length>0 && t.names.length<=50 &&
+    t.names.every(n=>typeof n==="string" && n.trim() && n.length<=30));
+}
+function buildMembers(keepSelf){
+  const rows=(lastRows && lastRows.ym===S.ym)? lastRows.rows : [];
+  const byName={}; rows.forEach(x=>byName[x.name]=x);
+  const base=flexTeam? flexTeam.names : CONFIG.members;
+  const past=!!(flexTeam && flex && S.ym<flex.ym);
+  // 순서는 명단 순서 고정 → 저장할 때마다 줄이 뒤바뀌지 않게. 시트에만 있는 이름은 뒤에 붙임(FLEX 명단을 쓸 때는 지난 달만)
+  const extra=(!flexTeam||past)? rows.map(x=>x.name).filter(n=>base.indexOf(n)<0).sort() : [];
+  const names=[...new Set([...base, ...extra])];
+  S.members=names.map(n=>{
+    const prev=S.members.find(m=>m.name===n), row=byName[n];
+    // '일별' 열(JSON): {u:사용여부, m:직접입력 누적, d:{날짜:값}}
+    let dj=null; try{ dj=row&&row.daily? JSON.parse(row.daily):null; }catch(_){ dj=null; }
+    // 서버에 지금 저장된 누적·연차 → FLEX 값과 다르면 applyFlex가 저장
+    if(row) srv[n]=(dj? String(dj.m||"") : String(row.worked||""))+"|"+String(row.annual||"0"); else delete srv[n];
+    // 자동 폴링(keepSelf)에서는 '내' 데이터를 서버로 덮어쓰지 않음 → 입력 중이던 일별이 날아가지 않게
+    if(keepSelf && n===S.whoami && prev) return norm(prev);
+    if(!row) return prev? norm(prev) : {name:n,worked:"",annual:"0",daily:{},useDaily:false};
+    return {
+      name:n,
+      worked: dj? String(dj.m||"") : String(row.worked||""),
+      annual: String(row.annual||"0"),
+      daily:  dj&&dj.d&&typeof dj.d==="object"? dj.d : {},
+      useDaily: dj? !!dj.u : false,
+      at: row.updatedAt||null
+    };
+  });
+}
 async function pull(silent,keepSelf){
   if(!sync.on) return;
   if(!silent) setSync("idle","읽는 중…");
   try{
     const j=await jsonp({key:CONFIG.key, month:S.ym});
     if(!j.ok) throw new Error(j.error||"서버 오류");
-    const byName={}; (j.rows||[]).forEach(x=>byName[x.name]=x);
-    // 순서는 CONFIG.members 고정 → 카드가 저장할 때마다 뒤바뀌지 않게. 서버에만 있는 이름은 뒤에 붙임.
-    const extra=(j.rows||[]).map(x=>x.name).filter(n=>CONFIG.members.indexOf(n)<0).sort();
-    const names=[...new Set([...CONFIG.members, ...extra])];
-    S.members=names.map(n=>{
-      const prev=S.members.find(m=>m.name===n), row=byName[n];
-      // '일별' 열(JSON): {u:사용여부, m:직접입력 누적, d:{날짜:값}}
-      let dj=null; try{ dj=row&&row.daily? JSON.parse(row.daily):null; }catch(_){ dj=null; }
-      // 서버에 지금 저장된 누적·연차 → FLEX 값과 다르면 applyFlex가 저장
-      if(row) srv[n]=(dj? String(dj.m||"") : String(row.worked||""))+"|"+String(row.annual||"0"); else delete srv[n];
-      // 자동 폴링(keepSelf)에서는 '내' 데이터를 서버로 덮어쓰지 않음 → 입력 중이던 일별이 날아가지 않게
-      if(keepSelf && n===S.whoami && prev) return norm(prev);
-      if(!row) return prev? norm(prev) : {name:n,worked:"",annual:"0",daily:{},useDaily:false};
-      return {
-        name:n,
-        worked: dj? String(dj.m||"") : String(row.worked||""),
-        annual: String(row.annual||"0"),
-        daily:  dj&&dj.d&&typeof dj.d==="object"? dj.d : {},
-        useDaily: dj? !!dj.u : false,
-        at: row.updatedAt||null
-      };
-    });
+    lastRows={ym:S.ym, rows:j.rows||[]};
+    buildMembers(keepSelf);
     sync.last=new Date();
     setSync("ok","팀과 동기화됨 · "+sync.last.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})+" 기준");
     fillWho();
@@ -565,7 +581,12 @@ window.addEventListener("message",e=>{
   if(e.source!==window || !m || m.source!=="flex-work-calc") return;
   if(m.type==="flexcalc:config"){ onTeamKey(typeof m.key==="string"?m.key.trim():""); return; }
   if(m.type!=="flexcalc:data") return;
-  if(m.ok && flexValid(m.data)){ flex=m.data; flexErr=""; }
+  if(m.ok && flexValid(m.data)){
+    flex=m.data; flexErr="";
+    // FLEX 조직도 명단이 바뀌었으면 팀원 목록을 다시 만든다(확장 1.4는 명단을 안 보냄 → 기본 명단)
+    const t=teamValid(m.data.team)? {dept:String(m.data.team.dept||"").slice(0,40), names:m.data.team.names.map(n=>n.trim())} : null;
+    if(JSON.stringify(t)!==JSON.stringify(flexTeam)){ flexTeam=t; buildMembers(true); fillWho(); renderDays(); }
+  }
   else { flex=null; flexErr=(m.error&&String(m.error).slice(0,80))||"값을 읽지 못함"; }
   applyFlex(); render();
 });
@@ -663,7 +684,12 @@ function render(){
     "</div>";
   });
   $("team").innerHTML=html;
-  $("teamSub").textContent="· "+S.members.length+"명 · 기대 페이스 "+pace.toFixed(0)+"%";
+  $("teamSub").textContent="· "+S.members.length+"명"+(flexTeam?" · FLEX ‘"+flexTeam.dept+"’ 기준":"")+" · 기대 페이스 "+pace.toFixed(0)+"%";
+  // 팀원 추가/숨기기: FLEX 명단을 따를 때는 끈다(FLEX 조직도가 기준)
+  $("addM").disabled=$("delM").disabled=!!flexTeam;
+  $("memberMsg").textContent= flexTeam
+    ? "팀원 명단은 FLEX 조직도 ‘"+flexTeam.dept+"’ 구성원을 그대로 따릅니다. 사람이 바뀌면 FLEX에 반영되는 대로 여기도 바뀝니다(최대 6시간)."
+    : "FLEX 명단을 못 받아 기본 명단을 씁니다. 추가하면 팀 시트에 그 이름의 행이 생깁니다. 숨기기는 이 화면에서만 빠지고 팀 시트 행은 그대로입니다.";
   $("teamNote").innerHTML=(n
     ? "입력한 <b>"+n+"명</b> 기준 · 평균 진행률 <b>"+(st?(sw/st*100).toFixed(1):0)+"%</b> · 평균 하루 필요 <b class='num'>"+(needN?hm(needSum/needN):"–")+"</b>"+
       " · 목표 달성 <b>"+doneN+"명</b> · 하루 9시간 넘게 필요 <b style='color:"+(risk?"var(--warn)":"var(--ink)")+"'>"+risk+"명</b>"
